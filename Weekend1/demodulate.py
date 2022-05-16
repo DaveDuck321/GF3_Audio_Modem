@@ -35,7 +35,7 @@ def get_bytes_from_noisy_symbols(symbols):
 N = 1024
 L = 32
 
-channel_response = csv_column_to_numpy("channel_impulse.csv")
+channel_response = csv_column_to_numpy("challenge_files/channel_impulse.csv")
 received_signal = csv_column_to_numpy(sys.argv[1])
 
 dft_of_channel_response = np.fft.fft(channel_response, N)
@@ -58,4 +58,4 @@ for block_index in range(0, len(blocks_of_received_signal), 4):
     bytes_of_file += get_bytes_from_noisy_symbols(np.concatenate(dft_blocks))
 
 
-open(f"{sys.argv[1].strip('.csv')}.bin", "wb").write(bytes_of_file)
+open(f"{sys.argv[1].removesuffix('.csv')}.bin", "wb").write(bytes_of_file)
