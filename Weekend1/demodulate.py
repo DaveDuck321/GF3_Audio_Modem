@@ -58,4 +58,7 @@ for block_index in range(0, len(blocks_of_received_signal), 4):
     bytes_of_file += get_bytes_from_noisy_symbols(np.concatenate(dft_blocks))
 
 
-open(f"{sys.argv[1].removesuffix('.csv')}.bin", "wb").write(bytes_of_file)
+output_file = f"{sys.argv[1].removesuffix('.csv')}.bin"
+open(output_file, "wb").write(bytes_of_file)
+print(output_file)
+
