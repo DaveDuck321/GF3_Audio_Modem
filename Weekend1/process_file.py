@@ -9,6 +9,8 @@ def process_custom_file_format(input_path: str):
     size = int(size.decode("utf-8"))
     data = data[:size]
 
-    open(input_path.replace(".bin", "_") + path.name, 'wb').write(data)
+    output_path = input_path.replace(".bin", "_") + path.name
+    open(output_path, 'wb').write(data)
+    return output_path
 
-process_custom_file_format(sys.argv[1])
+print(process_custom_file_format(sys.argv[1]))
