@@ -1,16 +1,40 @@
+from config import SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
+
 import numpy as np
 import sounddevice as sd
+from dvg_ringbuffer import RingBuffer
 
 import sys
+import uuid
 from argparse import ArgumentParser
 
 
+def save_recording_to_file(recording):
+    if not RECORDING_OUTPUT_DIR.exists():
+        RECORDING_OUTPUT_DIR.mkdir(parents=True)
+
+    recording_location =  RECORDING_OUTPUT_DIR / f"{uuid.uuid4().hex[:5]}.npy"
+    np.save(recording_location, recording)
+
+    print(f"[INFO] Audio recording saved to:  {recording_location}")
+
+
 def record_until_enter_key():
-    pass
+    buffer = RingBuffer(SAMPLE_RATE * MAX_RECORDING_DURATION)
+    def record_callback(in_data, frames, time, status):
+        buffer.extend(in_data.flatten())
+        if status:
+            print(status, file=sys.stderr)
+
+    with sd.InputStream(callback=record_callback, channels=1, samplerate=SAMPLE_RATE):
+        input("Press enter to stop recording")
+
+    save_recording_to_file(buffer)
+    return buffer
 
 
 def receive_signal(signal):
-    pass
+    sd.play(signal, samplerate=SAMPLE_RATE, blocking=True)
 
 
 if __name__ == "__main__":
