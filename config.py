@@ -1,6 +1,29 @@
+import numpy as np
+from scipy import signal
+
 from pathlib import Path
 
-SAMPLE_RATE = 48000
-MAX_RECORDING_DURATION = 60  # seconds
+AUDIO_SCALE_FACTOR = 0.1
+SAMPLE_RATE = 48_000
+MAX_RECORDING_DURATION = 120  # seconds
 RECORDING_OUTPUT_DIR = Path("recordings")
 TRANSMISSION_OUTPUT_DIR = Path("transmissions")
+
+CHIRP_DURATION = 1  # Seconds
+CHIRP_MIN_FREQUENCY = 20  # Hz
+CHIRP_MAX_FREQUENCY = 20_000  # Hz
+CHIRP = signal.chirp(
+    np.linspace(0, CHIRP_DURATION, CHIRP_DURATION * SAMPLE_RATE),
+    CHIRP_MIN_FREQUENCY,
+    CHIRP_DURATION,
+    CHIRP_MAX_FREQUENCY,
+)
+
+OFDM_BODY_LENGTH = 1 << 14
+OFDM_CYCLIC_PREFIX_LENGTH = 1024
+CONSTELLATION_SYMBOLS = {
+    0b00: +1 + 0j,
+    0b01: -1 + 0j,
+    0b10: +0 + 1j,
+    0b11: +0 - 1j,
+}
