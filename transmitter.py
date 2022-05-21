@@ -1,5 +1,9 @@
-from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR
-from common import set_audio_device_or_warn, finalize_argparse_for_sounddevice
+from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, TRANSMISSION_OUTPUT_DIR
+from common import (
+    save_data_to_file,
+    set_audio_device_or_warn,
+    finalize_argparse_for_sounddevice,
+)
 from signal_builder import SignalBuilder
 import OFDM
 
@@ -26,7 +30,7 @@ def modulate_file(transmission: bytes):
 
 
 def transmit_signal(signal):
-    sd.play(signal, samplerate=SAMPLE_RATE, blocking=True)
+    sd.play(AUDIO_SCALE_FACTOR * signal, samplerate=SAMPLE_RATE, blocking=True)
 
 
 if __name__ == "__main__":
@@ -48,6 +52,8 @@ if __name__ == "__main__":
 
     with open(args.file, "rb") as input_file:
         modulated_signal = modulate_file(input_file.read())
+
+    save_data_to_file(TRANSMISSION_OUTPUT_DIR, modulated_signal)
 
     if not args.silent:
         transmit_signal(modulated_signal)
