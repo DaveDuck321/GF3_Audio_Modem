@@ -5,7 +5,7 @@ from common import (
     set_audio_device_or_warn,
     finalize_argparse_for_sounddevice,
 )
-from synchronization_estimation import crop_signal_into_parts, estimate_channel_coefficients, synchronise
+from synchronization_estimation import crop_signal_into_parts, estimate_channel_coefficients
 
 
 import numpy as np
@@ -17,8 +17,6 @@ from argparse import ArgumentParser
 
 
 def receive_signal(signal):
-
-    synchronise(signal)
     start_chirps, ofdm_signal, end_chirps = crop_signal_into_parts(signal)
 
     channel_coefficients_start = estimate_channel_coefficients(start_chirps)
@@ -42,7 +40,7 @@ def record_until_enter_key():
         input("Press enter to stop recording")
 
     save_data_to_file(RECORDING_OUTPUT_DIR, buffer)
-    return buffer
+    return np.array(buffer)
 
 
 if __name__ == "__main__":
