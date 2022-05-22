@@ -1,31 +1,65 @@
-from config import CHIRP, CHIRP_DURATION, SAMPLE_RATE
+from config import CHIRP, OFDM_BODY_LENGTH, OFDM_CYCLIC_PREFIX_LENGTH
+
 import numpy as np
+import scipy.signal as signal
 
-def synchronise(transmitted_signal: np.ndarray):
-    # pre-crop the signal approximately to make it quicker to synchronise
-    # note, TC thinks `crop_signal_into_parts` is silly because it leaves no room for error
-    first_chirps = transmitted_signal[: min(3 * CHIRP.size, len(transmitted_signal)//2)]
+import matplotlib.pyplot as plt
 
-    convolved = np.convolve(first_chirps, CHIRP[::-1])
 
-    return synchronise_from_noisy_peaks(convolved)
+def get_chirp_indices(transmitted_signal: np.ndarray):
+    convolved = np.convolve(transmitted_signal, CHIRP[::-1])
 
-def synchronise_from_noisy_peaks(signal):
-    # get highest peaks
-    peaks = np.sort(np.argpartition(signal, -2)[-2:])
+    peaks, _ = signal.find_peaks(convolved, distance=CHIRP.size - 1)
 
-    # check they're spaced about right
-    assert abs(((peaks[1] - peaks[0]) - CHIRP_DURATION * SAMPLE_RATE)) < 0.1 * CHIRP_DURATION * SAMPLE_RATE
-
-    # return averaged start
-    return (peaks[0] + (peaks[1] - CHIRP_DURATION * SAMPLE_RATE)) // 2
-
-def crop_signal_into_parts(transmitted_signal: np.ndarray):
-    return (
-        transmitted_signal[: 2 * CHIRP.size],
-        transmitted_signal[2 * CHIRP.size : -2 * CHIRP.size],
-        transmitted_signal[-2 * CHIRP.size :],
+    highest_peaks = sorted(
+        sorted(peaks, key=lambda index: convolved[index], reverse=True)[:4]
     )
 
+    # Check the peaks are spaced about right
+    assert abs(((highest_peaks[1] - highest_peaks[0]) - CHIRP.size)) < 0.1 * CHIRP.size
+    assert abs(((highest_peaks[3] - highest_peaks[2]) - CHIRP.size)) < 0.1 * CHIRP.size
+
+    initial_chirps_start_index = (
+        highest_peaks[0] - CHIRP.size + (highest_peaks[1] - 2 * CHIRP.size)
+    ) // 2
+
+    final_chirps_start_index = (
+        highest_peaks[2] - CHIRP.size + (highest_peaks[3] - 2 * CHIRP.size)
+    ) // 2
+
+    return (initial_chirps_start_index, final_chirps_start_index)
+
+
+def crop_signal_into_parts(transmitted_signal: np.ndarray):
+    initial_chirps_start_index, final_chirps_start_index = get_chirp_indices(
+        transmitted_signal
+    )
+
+    calculated_ofdm_length = final_chirps_start_index - initial_chirps_start_index + 2 * CHIRP.size
+    ofdm_block_length = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
+    number_of_ofdm_blocks = round(calculated_ofdm_length / ofdm_block_length)
+
+    true_ofdm_length = number_of_ofdm_blocks * ofdm_block_length
+    start_of_ofdm_block = initial_chirps_start_index + 2 * CHIRP.size
+
+    return (
+        transmitted_signal[
+            max(initial_chirps_start_index, 0) : initial_chirps_start_index
+            + 2 * CHIRP.size
+        ],
+        transmitted_signal[
+            start_of_ofdm_block : start_of_ofdm_block + true_ofdm_length
+        ],
+        transmitted_signal[
+            final_chirps_start_index : final_chirps_start_index + 2 * CHIRP.size
+        ],
+    )
+
+
 def estimate_channel_coefficients(chirp_signal: np.ndarray):
-    return np.array([1])
+    convolved = np.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
+
+    channel_coefficients = convolved[
+        CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH
+    ]
+    return channel_coefficients

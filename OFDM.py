@@ -3,12 +3,14 @@ from config import (
     CONSTELLATION_BITS,
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
+    OFDM_DATA_INDEX_RANGE,
 )
 from signal_builder import SignalBuilder
 
 import numpy as np
 
 import random
+
 
 def map_to_constellation_symbols(data: bytes):
     constellation_symbols = []
@@ -40,21 +42,25 @@ def pad_symbols(symbols, alignment):
 
     padding_count = (alignment - unmatched_symbols) % alignment
 
-    for i in range(padding_count):
+    for _ in range(padding_count):
         symbols.append(random.choice(CONSTELLATION_SYMBOLS))
 
     return symbols
 
 
 def modulate_bytes(data: bytes):
-    ofdm_data_length = OFDM_BODY_LENGTH // 2 - 1
+    length_of_data_per_ofdm_block = (
+        OFDM_DATA_INDEX_RANGE["max"] - OFDM_DATA_INDEX_RANGE["min"]
+    )
 
     constellation_symbols = map_to_constellation_symbols(data)
-    constellation_symbols = pad_symbols(constellation_symbols, ofdm_data_length)
+    constellation_symbols = pad_symbols(
+        constellation_symbols, length_of_data_per_ofdm_block
+    )
 
     data_blocks = np.split(
         np.array(constellation_symbols),
-        len(constellation_symbols) // (OFDM_BODY_LENGTH // 2 - 1),
+        len(constellation_symbols) // length_of_data_per_ofdm_block,
     )
 
     ofdm_signal = SignalBuilder()
@@ -65,8 +71,14 @@ def modulate_bytes(data: bytes):
         # contain 0 (no information, value 0.) This all ensures that the
         # output of the OFDM modulator is a real (baseband) vector.
 
+        block_with_garbage = np.concatenate([
+            [0] * OFDM_DATA_INDEX_RANGE["min"],
+            block,
+            [0] * (OFDM_BODY_LENGTH//2 - 1 - OFDM_DATA_INDEX_RANGE["max"]),
+        ])
+
         block_for_real_transmission = np.concatenate(
-            [[0], block, [0], np.conjugate(block[-1::-1])]
+            [[0], block_with_garbage, [0], np.conjugate(block_with_garbage[-1::-1])]
         )
         assert block_for_real_transmission.size == OFDM_BODY_LENGTH
 

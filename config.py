@@ -3,6 +3,11 @@ from scipy import signal
 
 from pathlib import Path
 
+
+def get_index_of_frequency(f):
+    return int(round(f * OFDM_BODY_LENGTH / SAMPLE_RATE))
+
+
 AUDIO_SCALE_FACTOR = 0.1
 SAMPLE_RATE = 48_000
 MAX_RECORDING_DURATION = 120  # seconds
@@ -19,8 +24,12 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
-OFDM_BODY_LENGTH = 1 << 14
-OFDM_CYCLIC_PREFIX_LENGTH = 1024
+OFDM_BODY_LENGTH = 1 << 16
+OFDM_CYCLIC_PREFIX_LENGTH = 1 << 14
+OFDM_DATA_INDEX_RANGE = {
+    "min": get_index_of_frequency(100),
+    "max": get_index_of_frequency(12_000),
+}
 
 CONSTELLATION_BITS = 2
 CONSTELLATION_SYMBOLS = {
