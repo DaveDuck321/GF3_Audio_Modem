@@ -21,9 +21,11 @@ CHIRP = signal.chirp(
 
 OFDM_BODY_LENGTH = 1 << 14
 OFDM_CYCLIC_PREFIX_LENGTH = 1024
+
+CONSTELLATION_BITS = 2
 CONSTELLATION_SYMBOLS = {
-    0b00: +1 + 0j,
-    0b01: -1 + 0j,
-    0b10: +0 + 1j,
-    0b11: +0 - 1j,
+    0b00: +40 + 0j,
+    0b01: -40 + 0j,
+    0b10: +0 + 40j,
+    0b11: +0 - 40j,
 }

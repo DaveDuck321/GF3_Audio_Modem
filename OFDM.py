@@ -1,14 +1,17 @@
-from config import CONSTELLATION_SYMBOLS, OFDM_BODY_LENGTH, OFDM_CYCLIC_PREFIX_LENGTH
+from config import (
+    CONSTELLATION_SYMBOLS,
+    CONSTELLATION_BITS,
+    OFDM_BODY_LENGTH,
+    OFDM_CYCLIC_PREFIX_LENGTH,
+)
 from signal_builder import SignalBuilder
 
 import numpy as np
 
 import random
 
-
 def map_to_constellation_symbols(data: bytes):
     constellation_symbols = []
-    constellation_group_size = int(np.round(np.log2(len(CONSTELLATION_SYMBOLS))))
 
     current_group = 0
     current_group_size = 0
@@ -19,7 +22,7 @@ def map_to_constellation_symbols(data: bytes):
 
             current_group |= 1 & (byte >> (shift - 1))
 
-            if current_group_size == constellation_group_size:
+            if current_group_size == CONSTELLATION_BITS:
                 constellation_symbols.append(CONSTELLATION_SYMBOLS[current_group])
 
                 current_group_size = 0
@@ -69,7 +72,7 @@ def modulate_bytes(data: bytes):
 
         idft_of_block = np.fft.ifft(block_for_real_transmission, OFDM_BODY_LENGTH)
         block_with_cyclic_prefix = np.concatenate(
-            [idft_of_block[OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
+            [idft_of_block[-OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
         )
 
         # Ensure imaginary component is zero
@@ -77,6 +80,50 @@ def modulate_bytes(data: bytes):
 
         ofdm_signal.append_signal_part(block_with_cyclic_prefix.real)
 
-    out_signal = ofdm_signal.get_signal()
-    print(out_signal.size)
-    return 5 * out_signal
+    return ofdm_signal.get_signal()
+
+
+def map_received_constellation_symbol_to_value(symbol):
+    return sorted(
+        CONSTELLATION_SYMBOLS,
+        key=lambda value: abs(symbol - CONSTELLATION_SYMBOLS[value]),
+    )[0]
+
+
+def demodulate_signal(channel_coefficients, signal):
+    ofdm_blocks = np.split(
+        signal, signal.size // (OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH)
+    )  # TODO: WHAT HAPPENS IF WE LOSE A SAMPLE HERE?
+
+    channel_dft = np.fft.fft(channel_coefficients, OFDM_BODY_LENGTH)
+
+    curret_byte = 0
+    position_in_current_byte = 0
+    output_bytes = []
+
+    for block in ofdm_blocks:
+        block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
+        dft_of_block = np.fft.fft(block_without_cyclic_prefix, OFDM_BODY_LENGTH)
+
+        equalized_dft = dft_of_block / channel_dft
+
+        for index, noisy_symbol in enumerate(equalized_dft):
+            if index == 0:
+                continue  # The first element is always set to zero: it contains no data
+
+            if index == OFDM_BODY_LENGTH // 2:
+                break  # TODO: use conjugate pairs for error correction?
+
+            position_in_current_byte += CONSTELLATION_BITS
+            curret_byte <<= CONSTELLATION_BITS
+            curret_byte |= map_received_constellation_symbol_to_value(noisy_symbol)
+            
+            if position_in_current_byte == 8:
+                output_bytes.append(curret_byte)
+                curret_byte = 0
+                position_in_current_byte = 0
+
+    # assert curret_byte == 0
+    # assert position_in_current_byte == 0
+
+    return bytes(output_bytes)
