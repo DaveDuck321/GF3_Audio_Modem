@@ -117,7 +117,7 @@ def demodulate_signal(channel_coefficients, signal):
             position_in_current_byte += CONSTELLATION_BITS
             curret_byte <<= CONSTELLATION_BITS
             curret_byte |= map_received_constellation_symbol_to_value(noisy_symbol)
-            
+
             if position_in_current_byte == 8:
                 output_bytes.append(curret_byte)
                 curret_byte = 0

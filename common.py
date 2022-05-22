@@ -17,9 +17,12 @@ def save_data_to_file(location: Path, signal: np.ndarray):
 
 
 def finalize_argparse_for_sounddevice(parser: ArgumentParser):
-    parser.add_argument("--device", "-d", type=int, help="Sounddevice ID to use")
+    parser.add_argument("--device", "-d", type=str, help="Sounddevice ID to use")
     parser.add_argument("--query_devices", "-q", action="store_true", help="List sounddevices and exit")
     args = parser.parse_args()
+
+    if args.device and args.device.isdecimal():
+        args.device = int(args.device)
 
     if args.query_devices:
         print(sd.query_devices())
