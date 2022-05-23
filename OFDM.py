@@ -4,6 +4,7 @@ from config import (
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
+    OFDM_SCALE_FACTOR,
 )
 from signal_builder import SignalBuilder
 
@@ -87,10 +88,12 @@ def modulate_bytes(data: bytes):
             [idft_of_block[-OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
         )
 
+        normalized_block = OFDM_SCALE_FACTOR *  block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
+
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
 
-        ofdm_signal.append_signal_part(block_with_cyclic_prefix.real)
+        ofdm_signal.append_signal_part(normalized_block)
 
     return ofdm_signal.get_signal()
 
