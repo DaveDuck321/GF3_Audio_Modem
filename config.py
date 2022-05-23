@@ -8,7 +8,8 @@ def get_index_of_frequency(f):
     return int(round(f * OFDM_BODY_LENGTH / SAMPLE_RATE))
 
 
-AUDIO_SCALE_FACTOR = 0.1
+OFDM_SCALE_FACTOR = 3
+AUDIO_SCALE_FACTOR = 0.3
 SAMPLE_RATE = 48_000
 MAX_RECORDING_DURATION = 120  # seconds
 RECORDING_OUTPUT_DIR = Path("recordings")
