@@ -66,19 +66,27 @@ def estimate_channel_coefficients(chirp_signal: np.ndarray):
     convolved_2 = signal.convolve(chirp_signal[CHIRP.size :], CHIRP[::-1])
     channel_coefficients_2 = convolved_2[CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH]
 
-    fft_channel_coefficients_1 = gaussian_filter1d(np.fft.fft(channel_coefficients_1), 3)
-    fft_channel_coefficients_2 = gaussian_filter1d(np.fft.fft(channel_coefficients_2), 3)
+    fft_channel_coefficients_1 = np.fft.fft(channel_coefficients_1)
+    fft_channel_coefficients_2 = np.fft.fft(channel_coefficients_2)
 
     average_magnitude = 0.5 * (np.abs(fft_channel_coefficients_1) + np.abs(fft_channel_coefficients_2))
     average_phase = 0.5 * (np.angle(fft_channel_coefficients_1) + np.angle(fft_channel_coefficients_2))
 
     average_channel_coefficients = np.fft.ifft(average_magnitude * np.exp(1j * average_phase))
+    combined_channel  =  np.fft.ifft(np.abs(fft_channel_coefficients_2) * np.exp(1j * np.angle(fft_channel_coefficients_2)))
 
     # plt.figure()
-    # plt.plot(np.angle(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)))
-    # plt.plot(np.angle(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)))
+    # plt.plot(np.angle(np.fft.fft(combined_channel, OFDM_BODY_LENGTH)), color='g')
+    # plt.plot(np.angle(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)), color='y')
+    # plt.plot(np.angle(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)), color='purple')
     # plt.plot(np.angle(np.fft.fft(average_channel_coefficients, OFDM_BODY_LENGTH)), color='r')
 
+   
+    # plt.figure()
+    # plt.plot(np.abs(np.fft.fft(combined_channel, OFDM_BODY_LENGTH)), color='g')
+    # plt.plot(np.abs(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)), color='y')
+    # plt.plot(np.abs(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)), color='purple')
+    # plt.plot(np.abs(np.fft.fft(average_channel_coefficients, OFDM_BODY_LENGTH)), color='r')
     # plt.show()
 
     # print(channel_coefficients)
