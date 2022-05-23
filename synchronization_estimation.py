@@ -2,6 +2,7 @@ from config import CHIRP, OFDM_BODY_LENGTH, OFDM_CYCLIC_PREFIX_LENGTH
 
 import numpy as np
 import scipy.signal as signal
+from scipy.ndimage import gaussian_filter1d
 
 import matplotlib.pyplot as plt
 
@@ -35,7 +36,9 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
         transmitted_signal
     )
 
-    calculated_ofdm_length = final_chirps_start_index - initial_chirps_start_index - 2 * CHIRP.size
+    calculated_ofdm_length = (
+        final_chirps_start_index - initial_chirps_start_index - 2 * CHIRP.size
+    )
     ofdm_block_length = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
     number_of_ofdm_blocks = round(calculated_ofdm_length / ofdm_block_length)
 
@@ -57,11 +60,26 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
 
 
 def estimate_channel_coefficients(chirp_signal: np.ndarray):
-    convolved = signal.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
+    convolved_1 = signal.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
+    channel_coefficients_1 = convolved_1[CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH]
 
-    channel_coefficients = convolved[
-        CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH
-    ]
+    convolved_2 = signal.convolve(chirp_signal[CHIRP.size :], CHIRP[::-1])
+    channel_coefficients_2 = convolved_2[CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH]
 
-    print(channel_coefficients)
-    return channel_coefficients
+    fft_channel_coefficients_1 = gaussian_filter1d(np.fft.fft(channel_coefficients_1), 3)
+    fft_channel_coefficients_2 = gaussian_filter1d(np.fft.fft(channel_coefficients_2), 3)
+
+    average_magnitude = 0.5 * (np.abs(fft_channel_coefficients_1) + np.abs(fft_channel_coefficients_2))
+    average_phase = 0.5 * (np.angle(fft_channel_coefficients_1) + np.angle(fft_channel_coefficients_2))
+
+    average_channel_coefficients = np.fft.ifft(average_magnitude * np.exp(1j * average_phase))
+
+    # plt.figure()
+    # plt.plot(np.angle(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)))
+    # plt.plot(np.angle(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)))
+    # plt.plot(np.angle(np.fft.fft(average_channel_coefficients, OFDM_BODY_LENGTH)), color='r')
+
+    # plt.show()
+
+    # print(channel_coefficients)
+    return channel_coefficients_1
