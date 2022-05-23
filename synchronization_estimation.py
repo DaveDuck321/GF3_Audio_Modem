@@ -35,7 +35,7 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
         transmitted_signal
     )
 
-    calculated_ofdm_length = final_chirps_start_index - initial_chirps_start_index + 2 * CHIRP.size
+    calculated_ofdm_length = final_chirps_start_index - initial_chirps_start_index - 2 * CHIRP.size
     ofdm_block_length = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
     number_of_ofdm_blocks = round(calculated_ofdm_length / ofdm_block_length)
 
@@ -62,4 +62,6 @@ def estimate_channel_coefficients(chirp_signal: np.ndarray):
     channel_coefficients = convolved[
         CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH
     ]
+
+    print(channel_coefficients)
     return channel_coefficients
