@@ -24,8 +24,8 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
-OFDM_BODY_LENGTH = 1 << 16
-OFDM_CYCLIC_PREFIX_LENGTH = 1 << 14
+OFDM_BODY_LENGTH = 1 << 13
+OFDM_CYCLIC_PREFIX_LENGTH = 1 << 10
 OFDM_DATA_INDEX_RANGE = {
     "min": get_index_of_frequency(1000),
     "max": get_index_of_frequency(10_000),
