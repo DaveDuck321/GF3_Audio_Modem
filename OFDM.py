@@ -120,10 +120,10 @@ def demodulate_signal(channel_coefficients, signal):
         equalized_dft = dft_of_block / channel_dft
 
         for index, noisy_symbol in enumerate(equalized_dft):
-            if index == 0:
+            if index  <= OFDM_DATA_INDEX_RANGE["min"]:
                 continue  # The first element is always set to zero: it contains no data
 
-            if index == OFDM_BODY_LENGTH // 2:
+            if index == OFDM_BODY_LENGTH // 2 or index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break  # TODO: use conjugate pairs for error correction?
 
             position_in_current_byte += CONSTELLATION_BITS
