@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def get_chirp_indices(transmitted_signal: np.ndarray):
-    convolved = np.convolve(transmitted_signal, CHIRP[::-1])
+    convolved = signal.convolve(transmitted_signal, CHIRP[::-1])
 
     peaks, _ = signal.find_peaks(convolved, distance=CHIRP.size - 1)
 
@@ -57,7 +57,7 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
 
 
 def estimate_channel_coefficients(chirp_signal: np.ndarray):
-    convolved = np.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
+    convolved = signal.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
 
     channel_coefficients = convolved[
         CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH
