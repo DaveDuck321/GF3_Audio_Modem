@@ -33,8 +33,8 @@ OFDM_DATA_INDEX_RANGE = {
 
 CONSTELLATION_BITS = 2
 CONSTELLATION_SYMBOLS = {
-    0b00: +40 + 0j,
-    0b01: -40 + 0j,
-    0b10: +0 + 40j,
-    0b11: +0 - 40j,
+    0b00: +1 + 1j,
+    0b01: +1 - 1j,
+    0b10: -1 + 1j,
+    0b11: -1 - 1j,
 }
