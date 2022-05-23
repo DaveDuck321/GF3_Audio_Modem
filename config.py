@@ -15,8 +15,8 @@ RECORDING_OUTPUT_DIR = Path("recordings")
 TRANSMISSION_OUTPUT_DIR = Path("transmissions")
 
 CHIRP_DURATION = 1  # Seconds
-CHIRP_MIN_FREQUENCY = 20  # Hz
-CHIRP_MAX_FREQUENCY = 20_000  # Hz
+CHIRP_MIN_FREQUENCY = 1000  # Hz
+CHIRP_MAX_FREQUENCY = 10_000  # Hz
 CHIRP = signal.chirp(
     np.linspace(0, CHIRP_DURATION, CHIRP_DURATION * SAMPLE_RATE),
     CHIRP_MIN_FREQUENCY,
@@ -27,8 +27,8 @@ CHIRP = signal.chirp(
 OFDM_BODY_LENGTH = 1 << 16
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 14
 OFDM_DATA_INDEX_RANGE = {
-    "min": get_index_of_frequency(100),
-    "max": get_index_of_frequency(12_000),
+    "min": get_index_of_frequency(1000),
+    "max": get_index_of_frequency(10_000),
 }
 
 CONSTELLATION_BITS = 2
