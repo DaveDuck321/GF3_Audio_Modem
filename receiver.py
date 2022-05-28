@@ -27,6 +27,11 @@ def receive_signal(signal):
     channel_coefficients_start = estimate_channel_coefficients(start_chirps)
     channel_coefficients_end = estimate_channel_coefficients(end_chirps)
 
+    import matplotlib.pyplot as plt
+    plt.plot(channel_coefficients_start)
+    plt.plot(channel_coefficients_end)
+    plt.show()
+
     demodulated_signal = demodulate_signal(channel_coefficients_start, ofdm_signal)
 
     return demodulated_signal
@@ -54,12 +59,12 @@ if __name__ == "__main__":
     args = finalize_argparse_for_sounddevice(parser)
 
     if args.file is not None:
-        signal_from_file = np.load(args.file)
+        recorded_signal = np.load(args.file)
     else:
         set_audio_device_or_warn(args)
         recorded_signal = record_until_enter_key()
 
-    demodulated_file = receive_signal(signal_from_file)
+    demodulated_file = receive_signal(recorded_signal)
 
     if args.expected_output is not None:
         with open(args.expected_output, "rb") as expected_file:
