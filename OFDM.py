@@ -49,6 +49,23 @@ def pad_symbols(symbols, alignment):
     return symbols
 
 
+def generate_known_ofdm_block():
+    np.random.seed(69)
+    constellation_symbols = list(CONSTELLATION_SYMBOLS.values())
+
+    random_block = np.random.choice(constellation_symbols, OFDM_BODY_LENGTH//2 - 1)
+    block_for_real_transmission = np.concatenate(
+        [[0], random_block, [0], np.conjugate(random_block[-1::-1])]
+    )
+    assert block_for_real_transmission.size == OFDM_BODY_LENGTH
+
+    idft_of_block = np.fft.ifft(block_for_real_transmission, OFDM_BODY_LENGTH)
+    block_with_cyclic_prefix = np.concatenate(
+        [idft_of_block[-OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
+    )
+
+    return block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
+
 def modulate_bytes(data: bytes):
     length_of_data_per_ofdm_block = (
         OFDM_DATA_INDEX_RANGE["max"] - OFDM_DATA_INDEX_RANGE["min"]
