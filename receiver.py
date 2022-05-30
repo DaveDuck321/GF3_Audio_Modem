@@ -22,17 +22,11 @@ from argparse import ArgumentParser
 
 
 def receive_signal(signal):
-    start_chirps, ofdm_signal, end_chirps = crop_signal_into_parts(signal)
+    start_chirps, known_ofdm_signal, ofdm_signal, end_chirps = crop_signal_into_parts(signal)
 
-    channel_coefficients_start = estimate_channel_coefficients(start_chirps)
-    channel_coefficients_end = estimate_channel_coefficients(end_chirps)
+    channel_coefficients = estimate_channel_coefficients(known_ofdm_signal)
 
-    import matplotlib.pyplot as plt
-    plt.plot(channel_coefficients_start)
-    plt.plot(channel_coefficients_end)
-    plt.show()
-
-    demodulated_signal = demodulate_signal(channel_coefficients_start, ofdm_signal)
+    demodulated_signal = demodulate_signal(channel_coefficients, ofdm_signal)
 
     return demodulated_signal
 
