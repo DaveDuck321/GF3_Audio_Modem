@@ -1,4 +1,5 @@
 from config import CHIRP, OFDM_BODY_LENGTH, OFDM_CYCLIC_PREFIX_LENGTH
+import OFDM
 
 import numpy as np
 import scipy.signal as signal
@@ -51,7 +52,10 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
             + 2 * CHIRP.size
         ],
         transmitted_signal[
-            start_of_ofdm_block : start_of_ofdm_block + true_ofdm_length
+            start_of_ofdm_block + ofdm_block_length : start_of_ofdm_block + 2 * ofdm_block_length
+        ],
+        transmitted_signal[
+            start_of_ofdm_block + 2 * ofdm_block_length : start_of_ofdm_block + true_ofdm_length
         ],
         transmitted_signal[
             final_chirps_start_index : final_chirps_start_index + 2 * CHIRP.size
@@ -59,35 +63,10 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
     )
 
 
-def estimate_channel_coefficients(chirp_signal: np.ndarray):
-    convolved_1 = signal.convolve(chirp_signal[: CHIRP.size], CHIRP[::-1])
-    channel_coefficients_1 = convolved_1[CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH]
+def estimate_channel_coefficients(recorded_known_ofdm_block: np.ndarray):
+    KNOWN_OFDM_BLOCK = OFDM.generate_known_ofdm_block()
+    fft_of_true_block = np.fft.fft(KNOWN_OFDM_BLOCK, OFDM_BODY_LENGTH)
+    fft_of_recorded_block = np.fft.fft(recorded_known_ofdm_block, OFDM_BODY_LENGTH)
 
-    convolved_2 = signal.convolve(chirp_signal[CHIRP.size :], CHIRP[::-1])
-    channel_coefficients_2 = convolved_2[CHIRP.size : CHIRP.size + OFDM_CYCLIC_PREFIX_LENGTH]
-
-    fft_channel_coefficients_1 = np.fft.fft(channel_coefficients_1)
-    fft_channel_coefficients_2 = np.fft.fft(channel_coefficients_2)
-
-    average_magnitude = 0.5 * (np.abs(fft_channel_coefficients_1) + np.abs(fft_channel_coefficients_2))
-    average_phase = 0.5 * (np.angle(fft_channel_coefficients_1) + np.angle(fft_channel_coefficients_2))
-
-    average_channel_coefficients = np.fft.ifft(average_magnitude * np.exp(1j * average_phase))
-    combined_channel  =  np.fft.ifft(np.abs(fft_channel_coefficients_2) * np.exp(1j * np.angle(fft_channel_coefficients_2)))
-
-    # plt.figure()
-    # plt.plot(np.angle(np.fft.fft(combined_channel, OFDM_BODY_LENGTH)), color='g')
-    # plt.plot(np.angle(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)), color='y')
-    # plt.plot(np.angle(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)), color='purple')
-    # plt.plot(np.angle(np.fft.fft(average_channel_coefficients, OFDM_BODY_LENGTH)), color='r')
-
-   
-    # plt.figure()
-    # plt.plot(np.abs(np.fft.fft(combined_channel, OFDM_BODY_LENGTH)), color='g')
-    # plt.plot(np.abs(np.fft.fft(channel_coefficients_1, OFDM_BODY_LENGTH)), color='y')
-    # plt.plot(np.abs(np.fft.fft(channel_coefficients_2, OFDM_BODY_LENGTH)), color='purple')
-    # plt.plot(np.abs(np.fft.fft(average_channel_coefficients, OFDM_BODY_LENGTH)), color='r')
-    # plt.show()
-
-    # print(channel_coefficients)
-    return channel_coefficients_1
+    frequency_response = fft_of_recorded_block / fft_of_true_block
+    return np.fft.ifft(frequency_response)
