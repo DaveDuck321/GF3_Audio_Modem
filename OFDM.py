@@ -4,7 +4,6 @@ from config import (
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
-    OFDM_SCALE_FACTOR,
 )
 from signal_builder import SignalBuilder
 
@@ -55,7 +54,7 @@ def generate_known_ofdm_block():
 
     random_block = np.random.choice(constellation_symbols, OFDM_BODY_LENGTH//2 - 1)
     block_for_real_transmission = np.concatenate(
-        [[0], random_block, [0], np.conjugate(random_block[-1::-1])]
+        [[np.sqrt(2)], random_block, [np.sqrt(2)], np.conjugate(random_block[-1::-1])]
     )
     assert block_for_real_transmission.size == OFDM_BODY_LENGTH
 
@@ -90,13 +89,13 @@ def modulate_bytes(data: bytes):
         # output of the OFDM modulator is a real (baseband) vector.
 
         block_with_garbage = np.concatenate([
-            [0] * OFDM_DATA_INDEX_RANGE["min"],
+            [0] * (OFDM_DATA_INDEX_RANGE["min"] - 1),
             block,
-            [0] * (OFDM_BODY_LENGTH//2 - 1 - OFDM_DATA_INDEX_RANGE["max"]),
+            [0] * (OFDM_BODY_LENGTH//2 - OFDM_DATA_INDEX_RANGE["max"]),
         ])
 
         block_for_real_transmission = np.concatenate(
-            [[0], block_with_garbage, [0], np.conjugate(block_with_garbage[-1::-1])]
+            [[0], block_with_garbage, [0], np.conjugate(block_with_garbage[::-1])]
         )
         assert block_for_real_transmission.size == OFDM_BODY_LENGTH
 
@@ -105,7 +104,7 @@ def modulate_bytes(data: bytes):
             [idft_of_block[-OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
         )
 
-        normalized_block = OFDM_SCALE_FACTOR *  block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
+        normalized_block = block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
 
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
@@ -127,7 +126,7 @@ def demodulate_signal(channel_coefficients, signal):
         signal, signal.size // (OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH)
     )  # TODO: WHAT HAPPENS IF WE LOSE A SAMPLE HERE?
 
-    channel_dft = np.fft.fft(channel_coefficients, OFDM_BODY_LENGTH)
+    channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
 
     curret_byte = 0
     position_in_current_byte = 0
@@ -140,11 +139,11 @@ def demodulate_signal(channel_coefficients, signal):
         equalized_dft = dft_of_block / channel_dft
 
         for index, noisy_symbol in enumerate(equalized_dft):
-            if index  <= OFDM_DATA_INDEX_RANGE["min"]:
-                continue  # The first element is always set to zero: it contains no data
+            if index < OFDM_DATA_INDEX_RANGE["min"]:
+                continue # These frequencies contain no data
 
-            if index == OFDM_BODY_LENGTH // 2 or index >= OFDM_DATA_INDEX_RANGE["max"]:
-                break  # TODO: use conjugate pairs for error correction?
+            if index >= OFDM_DATA_INDEX_RANGE["max"]:
+                break
 
             position_in_current_byte += CONSTELLATION_BITS
             curret_byte <<= CONSTELLATION_BITS

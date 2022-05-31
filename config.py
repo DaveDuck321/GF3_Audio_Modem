@@ -8,7 +8,6 @@ def get_index_of_frequency(f):
     return int(round(f * OFDM_BODY_LENGTH / SAMPLE_RATE))
 
 
-OFDM_SCALE_FACTOR = 3
 AUDIO_SCALE_FACTOR = 0.3
 SAMPLE_RATE = 48_000
 MAX_RECORDING_DURATION = 120  # seconds
@@ -28,7 +27,7 @@ CHIRP = signal.chirp(
 OFDM_BODY_LENGTH = 1 << 13
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 10
 OFDM_DATA_INDEX_RANGE = {
-    "min": get_index_of_frequency(1000),
+    "min": get_index_of_frequency(1000) + 1,
     "max": get_index_of_frequency(10_000),
 }
 
