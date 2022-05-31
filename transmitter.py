@@ -1,3 +1,4 @@
+# vim: set ts=4 sw=4 tw=0 et :
 from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, TRANSMISSION_OUTPUT_DIR
 from common import (
     save_data_to_file,
@@ -51,10 +52,13 @@ if __name__ == "__main__":
             transmit_signal(signal_from_file)
             exit(0)
 
+    print("Building OFDM symbols, please wait... ", flush=True)
+
     with open(args.file, "rb") as input_file:
         modulated_signal = modulate_file(input_file.read())
 
     save_data_to_file(TRANSMISSION_OUTPUT_DIR, modulated_signal)
 
-    if not args.silent:
-        transmit_signal(modulated_signal)
+    input("Press enter to play.")
+
+    transmit_signal(modulated_signal)
