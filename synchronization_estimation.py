@@ -64,9 +64,10 @@ def crop_signal_into_parts(transmitted_signal: np.ndarray):
 
 
 def estimate_channel_coefficients(recorded_known_ofdm_block: np.ndarray):
-    KNOWN_OFDM_BLOCK = OFDM.generate_known_ofdm_block()[OFDM_CYCLIC_PREFIX_LENGTH:]
-    fft_of_true_block = np.fft.fft(KNOWN_OFDM_BLOCK, OFDM_BODY_LENGTH)
+    known_ofdm_block_without_cyclic_prefix = OFDM.generate_known_ofdm_block()[OFDM_CYCLIC_PREFIX_LENGTH:]
+
+    fft_of_known_block = np.fft.fft(known_ofdm_block_without_cyclic_prefix, OFDM_BODY_LENGTH)
     fft_of_recorded_block = np.fft.fft(recorded_known_ofdm_block[OFDM_CYCLIC_PREFIX_LENGTH:], OFDM_BODY_LENGTH)
 
-    frequency_response = fft_of_recorded_block / fft_of_true_block
+    frequency_response = fft_of_recorded_block / fft_of_known_block
     return np.fft.ifft(frequency_response, OFDM_BODY_LENGTH)
