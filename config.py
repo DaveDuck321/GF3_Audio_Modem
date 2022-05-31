@@ -38,3 +38,32 @@ CONSTELLATION_SYMBOLS = {
     0b10: -1 + 1j,
     0b11: -1 - 1j,
 }
+
+# Peak suppression config {{{
+
+PEAK_SUPPRESSION_SEQUENCE = [
+    # sequence of passes through peak suppression algorithm
+    # peak detection threshold (in stddevs), sample view range, impulse shift range
+    # this should be tweaked more!!
+    (8, 50, 13),
+    (8, 15, 8),
+    (8, 10, 5),
+    (8, 5, 3),
+    (8, 4, 2),
+    (6, 5, 3),
+]
+
+# }}}
+
+SONG = [
+    (0, 3, (392, 493.88, 587.33)),       # G4 B4 D5
+    (3, 6, (440, 554.37, 659.29)),       # A4 C#5 E5
+    (6, 8, (440,)),                      # A4
+    (8, 11, (440, 554.37, 659.29)),      # A4 C#5 E5
+    (11, 14, (493.88, 587.33, 739.99)),  # B4 D5 F#5
+    (14, 15, (880,)),                    # A5
+    (15, 16, (783.99,)),                 # G5
+    (16, 17, (739.99,)),                 # F#5
+    (17, 18, (587.33,)),                 # D5
+]
+
