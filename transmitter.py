@@ -18,6 +18,7 @@ def modulate_file(transmission: bytes):
 
     signal_builder.append_signal_part(CHIRP)
     signal_builder.append_signal_part(CHIRP)
+    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
 
     # TODO: Transmit duplicate OFDM block
 
