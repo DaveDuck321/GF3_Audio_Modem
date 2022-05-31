@@ -94,9 +94,9 @@ def modulate_bytes(data: bytes):
         # output of the OFDM modulator is a real (baseband) vector.
 
         block_with_zeros = np.concatenate([
-            [0] * (OFDM_DATA_INDEX_RANGE["min"] - 1),
+            np.random.choice(list(CONSTELLATION_SYMBOLS.values()), OFDM_DATA_INDEX_RANGE["min"] - 1),
             block,
-            [0] * (OFDM_BODY_LENGTH//2 - OFDM_DATA_INDEX_RANGE["max"]),
+            np.random.choice(list(CONSTELLATION_SYMBOLS.values()), OFDM_BODY_LENGTH//2 - OFDM_DATA_INDEX_RANGE["max"])
         ])
 
         full_block_with_zeros = np.concatenate(
