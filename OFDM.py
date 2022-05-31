@@ -7,6 +7,8 @@ from config import (
     OFDM_DATA_INDEX_RANGE,
     PEAK_SUPPRESSION_SEQUENCE,
     SONG,
+    SONG_VOLUME,
+    SONG_LEN,
     get_index_of_frequency,
 )
 from signal_builder import SignalBuilder
@@ -202,12 +204,14 @@ def modulate_bytes(data: bytes):
 
         fun_block_low = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
 
-        for idx_range_l, idx_range_h, freqs in SONG:
-            if idx_range_l <= block_idx < idx_range_h:
+        song_idx = 0
+        for note_len, freqs in SONG:
+            if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
                 for freq in freqs:
                     fun_block_low[get_index_of_frequency(freq)] = 1
+            song_idx += note_len
 
-        fun_block_low *= 50 * np.max(np.abs(block))
+        fun_block_low *= SONG_VOLUME * np.max(np.abs(block))
 
 
         block_with_zeros = np.concatenate([
