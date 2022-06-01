@@ -26,6 +26,7 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
+KNOWN_OFDM_REPEAT_COUNT = 4
 OFDM_BODY_LENGTH = 1 << 13
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 10
 OFDM_DATA_INDEX_RANGE = {
@@ -41,4 +42,4 @@ CONSTELLATION_SYMBOLS = {
     0b11: -1 - 1j,
 }
 
-LDPC_CODER = ldpc.dummy_code()
+LDPC_CODER = ldpc.code()
