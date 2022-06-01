@@ -1,16 +1,18 @@
 # vim: set ts=4 sw=4 tw=0 et :
 from config import (
-    CONSTELLATION_SYMBOLS,
     CONSTELLATION_BITS,
+    CONSTELLATION_SYMBOLS,
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
-    PEAK_SUPPRESSION_SEQUENCE,
+    PEAK_SUPPRESSION_STATS_ENABLED,
+    PEAK_SUPPRESSION_ENABLED,
     PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR,
-    SONG,
+    PEAK_SUPPRESSION_SEQUENCE,
+    SONG_LEN,
     SONG_NOTES,
     SONG_VOLUME,
-    SONG_LEN,
+    SONG,
     get_index_of_frequency,
 )
 from signal_builder import SignalBuilder
@@ -19,8 +21,6 @@ import numpy as np
 import scipy
 
 import random
-
-SUPPRESSION_STATS = True
 
 def map_to_constellation_symbols(data: bytes):
     constellation_symbols = []
@@ -76,6 +76,9 @@ def generate_known_ofdm_block():
     return block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
 
 def suppress_peaks(data: np.ndarray):
+    if not PEAK_SUPPRESSION_ENABLED:
+        return data
+
     assert data.size == OFDM_BODY_LENGTH
 
     # this is overwritten on each pass
@@ -230,9 +233,8 @@ def modulate_bytes(data: bytes):
 
         time_domain_block_with_peaks = np.fft.ifft(full_block_with_all_freqs, OFDM_BODY_LENGTH)
         improved_time_domain_block = suppress_peaks(time_domain_block_with_peaks)
-        # improved_time_domain_block = time_domain_block_with_peaks
 
-        if SUPPRESSION_STATS:
+        if PEAK_SUPPRESSION_STATS_ENABLED:
             suppression_prc = 100 - 100 * np.max(np.abs(improved_time_domain_block))/np.max(np.abs(time_domain_block_with_peaks))
             avg_suppression += suppression_prc
             print(f"[{block_idx+1}/{len(data_blocks)}] Symbol peak suppression: {suppression_prc:.2f}%")
@@ -248,7 +250,7 @@ def modulate_bytes(data: bytes):
 
         ofdm_signal.append_signal_part(normalized_block)
 
-    if SUPPRESSION_STATS:
+    if PEAK_SUPPRESSION_STATS_ENABLED:
         avg_suppression /= len(data_blocks)
         print(f"Average peak suppression: {avg_suppression:.2f}%", flush=True)
 

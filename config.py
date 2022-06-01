@@ -46,6 +46,9 @@ LDPC_CODER = ldpc.code()
 
 # Peak suppression config {{{
 
+PEAK_SUPPRESSION_STATS_ENABLED = False
+PEAK_SUPPRESSION_ENABLED = True
+
 _perfect_time_impulse = np.zeros(OFDM_BODY_LENGTH)
 _perfect_time_impulse[OFDM_BODY_LENGTH//2] = 1
 _fft_impulse_approximator = np.fft.fft(_perfect_time_impulse)
