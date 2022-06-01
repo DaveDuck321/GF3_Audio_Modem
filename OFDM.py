@@ -59,21 +59,7 @@ def pad_symbols(symbols, alignment):
 
 
 def generate_known_ofdm_block():
-    np.random.seed(69)
-    constellation_symbols = list(CONSTELLATION_SYMBOLS.values())
-
-    random_block = np.random.choice(constellation_symbols, OFDM_BODY_LENGTH//2 - 1)
-    block_for_real_transmission = np.concatenate(
-        [[np.sqrt(2)], random_block, [np.sqrt(2)], np.conjugate(random_block[-1::-1])]
-    )
-    assert block_for_real_transmission.size == OFDM_BODY_LENGTH
-
-    idft_of_block = np.fft.ifft(block_for_real_transmission, OFDM_BODY_LENGTH)
-    block_with_cyclic_prefix = np.concatenate(
-        [idft_of_block[-OFDM_CYCLIC_PREFIX_LENGTH:], idft_of_block]
-    )
-
-    return block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
+    return np.load('known_ofdm_symbol.npy')
 
 def suppress_peaks(data: np.ndarray):
     if not PEAK_SUPPRESSION_ENABLED:
