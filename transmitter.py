@@ -66,6 +66,6 @@ if __name__ == "__main__":
 
     save_data_to_file(TRANSMISSION_OUTPUT_DIR, modulated_signal)
 
-    input("Press enter to play.")
-
-    transmit_signal(modulated_signal)
+    if not args.silent:
+        input("Press enter to play.")
+        transmit_signal(modulated_signal)
