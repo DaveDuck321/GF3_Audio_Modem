@@ -41,4 +41,4 @@ CONSTELLATION_SYMBOLS = {
     0b11: -1 - 1j,
 }
 
-LDPC_CODER = ldpc.code()
+LDPC_CODER = ldpc.dummy_code()
