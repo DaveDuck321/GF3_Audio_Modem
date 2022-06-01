@@ -6,7 +6,9 @@ from config import (
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
     PEAK_SUPPRESSION_SEQUENCE,
+    PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR,
     SONG,
+    SONG_NOTES,
     SONG_VOLUME,
     SONG_LEN,
     get_index_of_frequency,
@@ -73,7 +75,7 @@ def generate_known_ofdm_block():
 
     return block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
 
-def suppress_peaks(data: np.ndarray, near_impulse=np.load('filtered_impulse.npy')):
+def suppress_peaks(data: np.ndarray):
     assert data.size == OFDM_BODY_LENGTH
 
     # this is overwritten on each pass
@@ -130,7 +132,7 @@ def suppress_peaks(data: np.ndarray, near_impulse=np.load('filtered_impulse.npy'
                         c_min + (SAMPLE_VIEW_RANGE - IMPULSE_SHIFT_RANGE),
                         c_max - (SAMPLE_VIEW_RANGE - IMPULSE_SHIFT_RANGE)
                     ):
-                shifted_impulses.append(np.roll(near_impulse, s - OFDM_BODY_LENGTH//2))
+                shifted_impulses.append(np.roll(PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR, s - OFDM_BODY_LENGTH//2))
 
             # deal with the edge peak case
             if c_min < 0:
@@ -202,30 +204,31 @@ def modulate_bytes(data: bytes):
         # output of the OFDM modulator is a real (baseband) vector.
 
 
-        fun_block_low = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
+        fun_block = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
 
         song_idx = 0
-        for note_len, freqs in SONG:
+        for note_len, notes in SONG:
             if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
-                for freq in freqs:
-                    fun_block_low[get_index_of_frequency(freq)] = 1
+                for note in notes:
+                    freq = SONG_NOTES[note]
+                    fun_block[get_index_of_frequency(freq)] = 1
             song_idx += note_len
 
-        fun_block_low *= SONG_VOLUME * np.max(np.abs(block))
+        fun_block *= SONG_VOLUME * np.max(np.abs(block))
 
 
-        block_with_zeros = np.concatenate([
-            fun_block_low,
+        block_with_all_freqs = np.concatenate([
+            fun_block,
             block,
             np.random.choice(list(CONSTELLATION_SYMBOLS.values()), OFDM_BODY_LENGTH//2 - OFDM_DATA_INDEX_RANGE["max"])
         ])
 
-        full_block_with_zeros = np.concatenate(
-            [[0], block_with_zeros, [0], np.conjugate(block_with_zeros[::-1])]
+        full_block_with_all_freqs = np.concatenate(
+            [[0], block_with_all_freqs, [0], np.conjugate(block_with_all_freqs[::-1])]
         )
-        assert full_block_with_zeros.size == OFDM_BODY_LENGTH
+        assert full_block_with_all_freqs.size == OFDM_BODY_LENGTH
 
-        time_domain_block_with_peaks = np.fft.ifft(full_block_with_zeros, OFDM_BODY_LENGTH)
+        time_domain_block_with_peaks = np.fft.ifft(full_block_with_all_freqs, OFDM_BODY_LENGTH)
         improved_time_domain_block = suppress_peaks(time_domain_block_with_peaks)
         # improved_time_domain_block = time_domain_block_with_peaks
 

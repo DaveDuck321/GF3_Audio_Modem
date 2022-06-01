@@ -24,9 +24,9 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
-OFDM_BODY_LENGTH = 1 << 13
-OFDM_CYCLIC_PREFIX_LENGTH = 1 << 10
-OFDM_DATA_INDEX_RANGE = {
+OFDM_BODY_LENGTH = 1 << 12
+OFDM_CYCLIC_PREFIX_LENGTH = 1 << 9
+OFDM_DATA_INDEX_RANGE = { # following python standard range convention
     "min": get_index_of_frequency(1000) + 1,
     "max": get_index_of_frequency(10_000),
 }
@@ -41,6 +41,13 @@ CONSTELLATION_SYMBOLS = {
 
 # Peak suppression config {{{
 
+_perfect_time_impulse = np.zeros(OFDM_BODY_LENGTH)
+_perfect_time_impulse[OFDM_BODY_LENGTH//2] = 1
+_fft_impulse_approximator = np.fft.fft(_perfect_time_impulse)
+_fft_impulse_approximator[OFDM_DATA_INDEX_RANGE["min"]:OFDM_DATA_INDEX_RANGE["max"]] = 0
+_fft_impulse_approximator[-OFDM_DATA_INDEX_RANGE["max"]:-OFDM_DATA_INDEX_RANGE["min"]] = 0
+
+PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR = np.fft.ifft(_fft_impulse_approximator, OFDM_BODY_LENGTH)
 PEAK_SUPPRESSION_SEQUENCE = [
     # sequence of passes through peak suppression algorithm
     # peak detection threshold (in stddevs), sample view range, impulse shift range
@@ -56,25 +63,37 @@ PEAK_SUPPRESSION_SEQUENCE = [
 # }}}
 
 SONG_VOLUME = 30
+SONG_NOTES = {
+    "G4": 392,
+    "A4": 440,
+    "B4": 493.88,
+    "C#5": 554.37,
+    "D5": 587.33,
+    "E5": 659.29,
+    "F#5": 739.99,
+    "G5": 783.99,
+    "A5": 880,
+}
 SONG = [
-    (3, (392, 493.88, 587.33)),     # G4 B4 D5
-    (3, (440, 554.37, 659.29)),     # A4 C#5 E5
-    (2, (440,)),                    # A4
-    (3, (440, 554.37, 659.29)),     # A4 C#5 E5
-    (3, (493.88, 587.33, 739.99)),  # B4 D5 F#5
-    (1, (880,)),                    # A5
-    (1, (783.99,)),                 # G5
-    (1, (739.99,)),                 # F#5
-    (1, (587.33,)),                 # D5
-    (3, (392, 493.88, 587.33)),     # G4 B4 D5
-    (3, (440, 554.37, 659.29)),     # A4 C#5 E5
-    (5, (440,)),                    # A4
-    (2, tuple()),
-    (1, (440,)),                    # A4
-    (1, (440,)),                    # A4
-    (1, (493.88,)),                 # B4
-    (1, (587.33,)),                 # D5
-    (2, tuple()),
-    (1, (493.88,)),                 # B4
+	(6, ("G4", "B4", "D5")),
+	(6, ("A4", "C#5", "E5")),
+	(4, ("A4",)),
+	(6, ("A4", "C#5", "E5")),
+	(6, ("B4", "D5", "F#5")),
+	(1, ("A5",)),
+	(1, ("G5",)),
+	(1, ("F#5",)),
+	(1, ("D5",)),
+	(6, ("G4", "B4", "D5")),
+	(6, ("A4", "C#5", "E5")),
+	(10, ("A4",)),
+	(4, tuple()),
+	(1, ("A4",)),
+	(1, ("A4",)),
+	(1, ("B4",)),
+	(1, ("D5",)),
+	(1, tuple()),
+	(1, ("B4",)),
 ]
+
 SONG_LEN = sum((x for x, _ in SONG))
