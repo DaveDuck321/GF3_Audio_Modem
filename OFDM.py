@@ -196,7 +196,8 @@ def modulate_bytes(data: bytes):
         fun_block = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
 
         song_idx = 0
-        for note_len, notes in SONG:
+        # TODO: choose based on frame
+        for note_len, notes in [note for frame in SONG for note in frame]:
             if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
                 for note in notes:
                     freq = SONG_NOTES[note]
