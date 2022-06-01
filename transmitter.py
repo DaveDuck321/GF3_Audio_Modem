@@ -1,4 +1,4 @@
-from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, TRANSMISSION_OUTPUT_DIR
+from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, KNOWN_OFDM_REPEAT_COUNT, TRANSMISSION_OUTPUT_DIR
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
@@ -21,10 +21,10 @@ def modulate_file(file_data: bytes):
 
     signal_builder.append_signal_part(CHIRP)
     signal_builder.append_signal_part(CHIRP)
-    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
-    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
-    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
-    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
+
+    known_ofdm_block = OFDM.generate_known_ofdm_block()
+    for _ in range(KNOWN_OFDM_REPEAT_COUNT):
+        signal_builder.append_signal_part(known_ofdm_block)
 
     # TODO: Transmit duplicate OFDM block
 
