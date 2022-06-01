@@ -7,7 +7,8 @@ from common import (
 )
 from error_stats import bit_error
 from synchronization_estimation import (
-    crop_signal_into_parts,
+    crop_frame_into_parts,
+    crop_signal_into_overlapping_frames,
     estimate_channel_coefficients,
 )
 from ldcp_tools import decode_from_llr
@@ -20,9 +21,18 @@ from dvg_ringbuffer import RingBuffer
 import sys
 from argparse import ArgumentParser
 
+import matplotlib.pyplot as plt
+
 
 def receive_signal(signal):
-    start_chirps, known_ofdm_signal, ofdm_signal, end_chirps = crop_signal_into_parts(signal)
+    signal_frames = crop_signal_into_overlapping_frames(signal)
+
+    for frame in signal_frames:
+        chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
+
+        channel_coefficients_start = estimate_channel_coefficients(prefix)
+        channel_coefficients_end = estimate_channel_coefficients(endfix)
+
 
     channel_coefficients = estimate_channel_coefficients(known_ofdm_signal)
 

@@ -1,72 +1,72 @@
 from config import (
     CHIRP,
+    CHIRP_DURATION,
     KNOWN_OFDM_REPEAT_COUNT,
+    NUMBER_OF_SYMBOLS_IN_FRAME,
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
+    OFDM_SYMBOL_LENGTH,
+    SAMPLE_RATE,
 )
 import OFDM
 
 import numpy as np
 import scipy.signal as signal
 
-import matplotlib.pyplot as plt
+
+def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
+    chirp_convolution = signal.convolve(transmitted_signal, CHIRP[::-1])
+
+    # This isn't great, but imo this is the best way to identify an unknown number of peaks
+    peak_threshold = 0.75 * np.max(chirp_convolution)
+    peaks, _ = signal.find_peaks(chirp_convolution, peak_threshold, distance=CHIRP.size - 1)
+    peaks -= CHIRP.size  # Convert to signal coordinates
+
+    # Ensure all peaks are reasonably spaced/ standard compliant
+    assert len(peaks) % 2 == 0
+    for peak_index in range(0, len(peaks), 2):
+        assert abs(peaks[peak_index+1] - peaks[peak_index] - CHIRP.size) < 0.01 * CHIRP.size
+
+        if peak_index == 0:
+            continue
+
+        expected_min_length = CHIRP_DURATION * SAMPLE_RATE + OFDM_SYMBOL_LENGTH * (2 * KNOWN_OFDM_REPEAT_COUNT + NUMBER_OF_SYMBOLS_IN_FRAME["min"])
+        expected_max_length = CHIRP_DURATION * SAMPLE_RATE + OFDM_SYMBOL_LENGTH * (2 * KNOWN_OFDM_REPEAT_COUNT + NUMBER_OF_SYMBOLS_IN_FRAME["max"])
+        assert abs(peaks[peak_index] - peaks[peak_index - 1]) > 0.99 * expected_min_length
+        assert abs(peaks[peak_index] - peaks[peak_index - 1]) < 1.01 * expected_max_length
+
+    # Lets crop the signal
+    frames = []
+    for peak_index in range(0, len(peaks) - 2, 2):
+        frames.append(transmitted_signal[max(peaks[peak_index], 0) : peaks[peak_index+3] + CHIRP.size])
+
+    return frames
 
 
-def get_chirp_indices(transmitted_signal: np.ndarray):
-    convolved = signal.convolve(transmitted_signal, CHIRP[::-1])
+def crop_frame_into_parts(frame: np.ndarray):
+    initial_chirps_start_index = 0
+    initial_chirps_end_index = 2 * CHIRP.size
 
-    peaks, _ = signal.find_peaks(convolved, distance=CHIRP.size - 1)
+    final_chirps_start_index = frame.size - 2 * CHIRP.size
+    final_chirps_end_index = frame.size
+    
+    prefix_known_symbol_start = initial_chirps_end_index
+    prefix_known_symbol_end = prefix_known_symbol_start + KNOWN_OFDM_REPEAT_COUNT * OFDM_SYMBOL_LENGTH
 
-    highest_peaks = sorted(
-        sorted(peaks, key=lambda index: convolved[index], reverse=True)[:4]
-    )
+    endfix_known_symbol_end = final_chirps_start_index
+    endfix_known_symbol_start = endfix_known_symbol_end - KNOWN_OFDM_REPEAT_COUNT * OFDM_SYMBOL_LENGTH
 
-    # Check the peaks are spaced about right
-    assert abs(((highest_peaks[1] - highest_peaks[0]) - CHIRP.size)) < 0.1 * CHIRP.size
-    assert abs(((highest_peaks[3] - highest_peaks[2]) - CHIRP.size)) < 0.1 * CHIRP.size
+    samples_of_data_ofdm = endfix_known_symbol_end - prefix_known_symbol_start
 
-    initial_chirps_start_index = (
-        highest_peaks[0] - CHIRP.size + (highest_peaks[1] - 2 * CHIRP.size)
-    ) // 2
-
-    final_chirps_start_index = (
-        highest_peaks[2] - CHIRP.size + (highest_peaks[3] - 2 * CHIRP.size)
-    ) // 2
-
-    return (initial_chirps_start_index, final_chirps_start_index)
-
-
-def crop_signal_into_parts(transmitted_signal: np.ndarray):
-    initial_chirps_start_index, final_chirps_start_index = get_chirp_indices(
-        transmitted_signal
-    )
-
-    calculated_ofdm_length = (
-        final_chirps_start_index - initial_chirps_start_index - 2 * CHIRP.size
-    )
-    ofdm_block_length = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
-    number_of_ofdm_blocks = round(calculated_ofdm_length / ofdm_block_length)
-
-    true_ofdm_length = number_of_ofdm_blocks * ofdm_block_length
-    start_of_ofdm_block = initial_chirps_start_index + 2 * CHIRP.size
+    print(f"[INFO] Expected: {samples_of_data_ofdm / OFDM_SYMBOL_LENGTH} data OFDM symbols")
+    number_of_ofdm_blocks = round(samples_of_data_ofdm / OFDM_SYMBOL_LENGTH)
 
     return (
-        transmitted_signal[
-            max(initial_chirps_start_index, 0) : initial_chirps_start_index
-            + 2 * CHIRP.size
-        ],
-        transmitted_signal[
-            start_of_ofdm_block : start_of_ofdm_block
-            + KNOWN_OFDM_REPEAT_COUNT * ofdm_block_length
-        ],
-        transmitted_signal[
-            start_of_ofdm_block
-            + KNOWN_OFDM_REPEAT_COUNT * ofdm_block_length : start_of_ofdm_block
-            + true_ofdm_length
-        ],
-        transmitted_signal[
-            final_chirps_start_index : final_chirps_start_index + 2 * CHIRP.size
-        ],
+        frame[initial_chirps_start_index : initial_chirps_end_index],       # Chirp
+        frame[prefix_known_symbol_start : prefix_known_symbol_end],         # Prefix
+        frame[prefix_known_symbol_end : endfix_known_symbol_start],         # Data
+        frame[endfix_known_symbol_start : endfix_known_symbol_end],         # Endfix
+        frame[final_chirps_start_index : final_chirps_end_index],           # Chirp
     )
 
 

@@ -15,7 +15,6 @@ from config import (
     SONG,
     get_index_of_frequency,
 )
-from signal_builder import SignalBuilder
 
 import numpy as np
 import scipy
@@ -198,7 +197,7 @@ def modulate_bytes(data: bytes):
 
     avg_suppression = 0
 
-    ofdm_signal = SignalBuilder()
+    ofdm_symbols = []
     for block_idx, block in enumerate(data_blocks):
         # Information is only mapped to frequency bins 1 to 511.
         # Frequency bins 513 to 1023 contain the reverse ordered conjugate
@@ -248,13 +247,13 @@ def modulate_bytes(data: bytes):
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
 
-        ofdm_signal.append_signal_part(normalized_block)
+        ofdm_symbols.append(normalized_block)
 
     if PEAK_SUPPRESSION_STATS_ENABLED:
         avg_suppression /= len(data_blocks)
         print(f"Average peak suppression: {avg_suppression:.2f}%", flush=True)
 
-    return ofdm_signal.get_signal()
+    return ofdm_symbols
 
 
 def map_received_constellation_symbol_to_value(symbol):

@@ -26,9 +26,14 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
+NUMBER_OF_SYMBOLS_IN_FRAME = {
+    "min": 10,
+    "max": 200,
+}
 KNOWN_OFDM_REPEAT_COUNT = 4
 OFDM_BODY_LENGTH = 1 << 12
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 9
+OFDM_SYMBOL_LENGTH = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
 OFDM_DATA_INDEX_RANGE = { # following python standard range convention
     "min": get_index_of_frequency(1000) + 1,
     "max": get_index_of_frequency(10_000),
@@ -42,12 +47,12 @@ CONSTELLATION_SYMBOLS = {
     0b11: -1 - 1j,
 }
 
-LDPC_CODER = ldpc.code()
+LDPC_CODER = ldpc.dummy_code()
 
 # Peak suppression config {{{
 
 PEAK_SUPPRESSION_STATS_ENABLED = False
-PEAK_SUPPRESSION_ENABLED = True
+PEAK_SUPPRESSION_ENABLED = False
 
 _perfect_time_impulse = np.zeros(OFDM_BODY_LENGTH)
 _perfect_time_impulse[OFDM_BODY_LENGTH//2] = 1
