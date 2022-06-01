@@ -1,4 +1,3 @@
-from cmath import exp
 from OFDM import demodulate_signal
 from config import SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
 from common import (
@@ -11,6 +10,7 @@ from synchronization_estimation import (
     crop_signal_into_parts,
     estimate_channel_coefficients,
 )
+from ldcp_tools import decode_from_llr
 
 
 import numpy as np
@@ -26,9 +26,10 @@ def receive_signal(signal):
 
     channel_coefficients = estimate_channel_coefficients(known_ofdm_signal)
 
-    demodulated_signal = demodulate_signal(channel_coefficients, ofdm_signal)
+    llr_for_each_bit = demodulate_signal(channel_coefficients, ofdm_signal)
+    demodulated_data = decode_from_llr(llr_for_each_bit)
 
-    return demodulated_signal
+    return demodulated_data
 
 
 def record_until_enter_key():

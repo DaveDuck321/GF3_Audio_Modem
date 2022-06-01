@@ -269,9 +269,7 @@ def demodulate_signal(channel_coefficients, signal):
 
     channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
 
-    curret_byte = 0
-    position_in_current_byte = 0
-    output_bytes = []
+    output_llr = []
 
     for block in ofdm_blocks:
         block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
@@ -281,21 +279,12 @@ def demodulate_signal(channel_coefficients, signal):
 
         for index, noisy_symbol in enumerate(equalized_dft):
             if index < OFDM_DATA_INDEX_RANGE["min"]:
-                continue # These frequencies contain no data
+                continue  # These frequencies contain no data
 
             if index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break
+            
+            output_llr.append(noisy_symbol.real)
+            output_llr.append(noisy_symbol.imag)
 
-            position_in_current_byte += CONSTELLATION_BITS
-            curret_byte <<= CONSTELLATION_BITS
-            curret_byte |= map_received_constellation_symbol_to_value(noisy_symbol)
-
-            if position_in_current_byte == 8:
-                output_bytes.append(curret_byte)
-                curret_byte = 0
-                position_in_current_byte = 0
-
-    # assert curret_byte == 0
-    # assert position_in_current_byte == 0
-
-    return bytes(output_bytes)
+    return np.array(output_llr)

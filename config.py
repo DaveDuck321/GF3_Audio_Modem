@@ -1,3 +1,5 @@
+import LDPC.ldpc as ldpc
+
 import numpy as np
 from scipy import signal
 
@@ -24,6 +26,7 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
+KNOWN_OFDM_REPEAT_COUNT = 4
 OFDM_BODY_LENGTH = 1 << 12
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 9
 OFDM_DATA_INDEX_RANGE = { # following python standard range convention
@@ -38,6 +41,8 @@ CONSTELLATION_SYMBOLS = {
     0b10: -1 + 1j,
     0b11: -1 - 1j,
 }
+
+LDPC_CODER = ldpc.code()
 
 # Peak suppression config {{{
 

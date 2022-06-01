@@ -1,5 +1,6 @@
 # vim: set ts=4 sw=4 tw=0 et :
-from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, TRANSMISSION_OUTPUT_DIR
+from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, KNOWN_OFDM_REPEAT_COUNT, TRANSMISSION_OUTPUT_DIR
+
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
@@ -7,6 +8,7 @@ from common import (
 )
 from signal_builder import SignalBuilder
 import OFDM
+import ldcp_tools
 
 import numpy as np
 import sounddevice as sd
@@ -14,12 +16,17 @@ import sounddevice as sd
 from argparse import ArgumentParser
 
 
-def modulate_file(transmission: bytes):
+def modulate_file(file_data: bytes):
+    transmission = ldcp_tools.encode_bytes(file_data)
+
     signal_builder = SignalBuilder()
 
     signal_builder.append_signal_part(CHIRP)
     signal_builder.append_signal_part(CHIRP)
-    signal_builder.append_signal_part(OFDM.generate_known_ofdm_block())
+
+    known_ofdm_block = OFDM.generate_known_ofdm_block()
+    for _ in range(KNOWN_OFDM_REPEAT_COUNT):
+        signal_builder.append_signal_part(known_ofdm_block)
 
     # TODO: Transmit duplicate OFDM block
 
