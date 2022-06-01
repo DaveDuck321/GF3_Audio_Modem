@@ -6,6 +6,7 @@ from common import (
 )
 from signal_builder import SignalBuilder
 import OFDM
+import ldcp_tools
 
 import numpy as np
 import sounddevice as sd
@@ -13,7 +14,9 @@ import sounddevice as sd
 from argparse import ArgumentParser
 
 
-def modulate_file(transmission: bytes):
+def modulate_file(file_data: bytes):
+    transmission = ldcp_tools.encode_bytes(file_data)
+
     signal_builder = SignalBuilder()
 
     signal_builder.append_signal_part(CHIRP)
