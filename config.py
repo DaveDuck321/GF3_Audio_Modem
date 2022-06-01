@@ -1,3 +1,5 @@
+import LDPC.ldpc as ldpc
+
 import numpy as np
 from scipy import signal
 
@@ -38,3 +40,5 @@ CONSTELLATION_SYMBOLS = {
     0b10: -1 + 1j,
     0b11: -1 - 1j,
 }
+
+LDPC_CODER = ldpc.code()
