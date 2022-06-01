@@ -241,7 +241,7 @@ def modulate_bytes(data: bytes):
             [improved_time_domain_block[-OFDM_CYCLIC_PREFIX_LENGTH:], improved_time_domain_block]
         )
 
-        normalized_block = block_with_cyclic_prefix.real / np.max(block_with_cyclic_prefix.real)
+        normalized_block = block_with_cyclic_prefix.real / np.max(np.abs(block_with_cyclic_prefix.real))
 
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
@@ -283,7 +283,7 @@ def demodulate_signal(channel_coefficients, signal):
 
             if index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break
-            
+
             output_llr.append(noisy_symbol.real)
             output_llr.append(noisy_symbol.imag)
 
