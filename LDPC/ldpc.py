@@ -1,6 +1,21 @@
 import numpy as np
 import ctypes as ct
 
+class dummy_code:
+    """ Rate 1 dummy code to (polymorphically) disable LDPC """
+    def __init__(self):
+        self.K = 64
+        self.N = self.K
+
+    def encode(self, data):
+        assert len(data) == self.K
+        return data
+    
+    def decode(self, llr_data):
+        assert len(llr_data) == self.K
+        return llr_data, 0
+
+
 class code:
     def __init__(self, standard = '802.11n', rate = '1/2', z=27, ptype='A'):
         self.standard = standard

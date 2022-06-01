@@ -22,14 +22,14 @@ def encode_bytes(data: bytes):
 
 
 def decode_from_llr(llr: np.ndarray):
-    excess_llr_blocks = llr.size % (2 * LDPC_CODER.K)
+    excess_llr_blocks = llr.size % LDPC_CODER.N
     cropped_llr = llr[:-excess_llr_blocks]
 
-    llr_blocks_for_jossy = np.split(cropped_llr, cropped_llr.size // (2 * LDPC_CODER.K))
+    llr_blocks_for_jossy = np.split(cropped_llr, cropped_llr.size // LDPC_CODER.N)
 
     binary_data = []
     for block in llr_blocks_for_jossy:
         app, _ = LDPC_CODER.decode(block)
         binary_data.extend((app < 0)[:LDPC_CODER.K])
-    
+
     return bytes(np.packbits(np.array(binary_data, dtype=np.uint8)))
