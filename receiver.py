@@ -1,5 +1,5 @@
 from OFDM import demodulate_signal
-from config import SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
+from config import OFDM_BODY_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
@@ -27,18 +27,17 @@ import matplotlib.pyplot as plt
 def receive_signal(signal):
     signal_frames = crop_signal_into_overlapping_frames(signal)
 
+    llr_for_each_bit = []
     for frame in signal_frames:
         chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
         channel_coefficients_start = estimate_channel_coefficients(prefix)
         channel_coefficients_end = estimate_channel_coefficients(endfix)
 
+        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data))
 
-    channel_coefficients = estimate_channel_coefficients(known_ofdm_signal)
 
-    llr_for_each_bit = demodulate_signal(channel_coefficients, ofdm_signal)
-    demodulated_data = decode_from_llr(llr_for_each_bit)
-
+    demodulated_data = decode_from_llr(np.array(llr_for_each_bit))
     return demodulated_data
 
 
