@@ -57,12 +57,12 @@ PEAK_SUPPRESSION_SEQUENCE = [
     # sequence of passes through peak suppression algorithm
     # peak detection threshold (in stddevs), sample view range, impulse shift range
     # this should be tweaked more!!
-    (8, 50, 13),
-    (8, 15, 8),
-    (8, 10, 5),
-    (8, 5, 3),
-    (8, 4, 2),
-    (6, 5, 3),
+    (3.5, 50, 13),
+    (3.5, 15, 8),
+    (3.5, 10, 5),
+    (3.5, 5, 3),
+    (3.5, 4, 2),
+    (3.5, 5, 3),
 ]
 
 # }}}
