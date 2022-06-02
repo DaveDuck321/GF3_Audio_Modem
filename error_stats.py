@@ -1,4 +1,6 @@
 from sys import argv
+import numpy as np
+import matplotlib.pyplot as plt
 
 def human_readable_compare_files(filename1, filename2):
     bytes1 = open(filename1, 'rb').read()
@@ -16,6 +18,28 @@ def machine_readable_compare_files(filename1, filename2):
     return f"{bit_error(bytes1, bytes2)}\t{byte_error(bytes1, bytes2)}\t" \
            f"{bit_error(bytes1, bytes2, include_length_error=False)}\t" \
            f"{byte_error(bytes1, bytes2, include_length_error=False)}"
+
+def get_cumulative_bit_errors(bytes1: bytes, bytes2: bytes):
+    return np.cumsum(np.unpackbits(np.array(list(bytes1), dtype=np.uint8)) != np.unpackbits(np.array(list(bytes2), dtype=np.uint8)))
+
+def plot_cumulative_error(bytes1: bytes, bytes2: bytes):
+    assert len(bytes1) == len(bytes2)
+    cumulative_errors = get_cumulative_bit_errors(bytes1, bytes2)
+
+    # Fit the first 20% to see linear trends
+    final_index = len(cumulative_errors) // 5
+    best_fit = np.polyfit(np.linspace(0, final_index, final_index), cumulative_errors[:final_index], 1)
+    t = np.linspace(0, len(cumulative_errors), 2)
+
+    plt.title("Cumulative bit errors")
+    plt.xlabel("Total bits processed")
+    plt.ylabel("Total bit errors")
+    plt.plot(t, np.poly1d(best_fit)(t), label="Linear 10% trend")
+    plt.plot(cumulative_errors, label="Demodulation errors")
+    plt.axvline(x = 0, ls='--')
+    plt.axvline(x = final_index, ls='--')
+    plt.legend()
+    plt.show()
 
 def bit_error(bytes1, bytes2, include_length_error=True):
     if include_length_error:
@@ -54,4 +78,3 @@ if __name__ == "__main__":
         print(machine_readable_compare_files(argv[2], argv[3]))
     else:
         print(human_readable_compare_files(argv[1], argv[2]))
-

@@ -1,10 +1,18 @@
 # vim: set ts=4 sw=4 tw=0 et :
-from config import CHIRP, SAMPLE_RATE, AUDIO_SCALE_FACTOR, KNOWN_OFDM_REPEAT_COUNT, TRANSMISSION_OUTPUT_DIR
+from config import (
+    AUDIO_SCALE_FACTOR,
+    CHIRP,
+    KNOWN_OFDM_REPEAT_COUNT,
+    NUMBER_OF_SYMBOLS_IN_FRAME,
+    SAMPLE_RATE,
+    TRANSMISSION_OUTPUT_DIR,
+)
 
 from common import (
+    finalize_argparse_for_sounddevice,
     save_data_to_file,
     set_audio_device_or_warn,
-    finalize_argparse_for_sounddevice,
+    split_list_to_chunks_of_length,
 )
 from signal_builder import SignalBuilder
 import OFDM
@@ -16,23 +24,59 @@ import sounddevice as sd
 from argparse import ArgumentParser
 
 
+def modulate_into_frames(known_ofdm_block, ofdm_symbols):
+    """
+    See standard for definitions:
+        https://www.overleaf.com/project/628befa0a5f784cb3d188f72
+    """
+    signal_builder = SignalBuilder()
+
+    for chunk in split_list_to_chunks_of_length(
+        ofdm_symbols, NUMBER_OF_SYMBOLS_IN_FRAME["max"]
+    ):
+        # Preamble:
+        #   single chirp
+        signal_builder.append_signal_part(CHIRP)
+
+        #   known OFDM symbols
+        for _ in range(KNOWN_OFDM_REPEAT_COUNT):
+            signal_builder.append_signal_part(known_ofdm_block)
+
+        # Data:
+        #   max length = 200 OFDM symbols
+        for ofdm_symbol in chunk:
+            signal_builder.append_signal_part(ofdm_symbol)
+
+        #   min length = 10 OFDM symbols
+        extra_symbols_needed = NUMBER_OF_SYMBOLS_IN_FRAME["min"] - len(chunk)
+        if extra_symbols_needed > 0:
+            for _ in range(extra_symbols_needed):
+                # Fill extra "padding" symbols with the known ofdm block as a placeholder
+                signal_builder.append_signal_part(known_ofdm_block)
+
+        # End-amble
+        #   known OFDM symbols
+        for _ in range(KNOWN_OFDM_REPEAT_COUNT):
+            signal_builder.append_signal_part(known_ofdm_block)
+
+        # single chirp
+        signal_builder.append_signal_part(CHIRP)
+
+    return signal_builder.get_signal()
+
+
 def modulate_file(file_data: bytes):
     transmission = ldcp_tools.encode_bytes(file_data)
 
     signal_builder = SignalBuilder()
 
     signal_builder.append_signal_part(CHIRP)
-    signal_builder.append_signal_part(CHIRP)
 
     known_ofdm_block = OFDM.generate_known_ofdm_block()
-    for _ in range(KNOWN_OFDM_REPEAT_COUNT):
-        signal_builder.append_signal_part(known_ofdm_block)
+    all_ofdm_symbols = OFDM.modulate_bytes(transmission)
 
-    # TODO: Transmit duplicate OFDM block
+    signal_builder.append_signal_part(modulate_into_frames(known_ofdm_block, all_ofdm_symbols))
 
-    signal_builder.append_signal_part(OFDM.modulate_bytes(transmission))
-
-    signal_builder.append_signal_part(CHIRP)
     signal_builder.append_signal_part(CHIRP)
 
     return signal_builder.get_signal()

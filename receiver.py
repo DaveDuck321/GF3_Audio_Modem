@@ -1,13 +1,14 @@
 from OFDM import demodulate_signal
-from config import SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
+from config import OFDM_BODY_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
     finalize_argparse_for_sounddevice,
 )
-from error_stats import bit_error
+from error_stats import bit_error, plot_cumulative_error
 from synchronization_estimation import (
-    crop_signal_into_parts,
+    crop_frame_into_parts,
+    crop_signal_into_overlapping_frames,
     estimate_channel_coefficients,
 )
 from ldcp_tools import decode_from_llr
@@ -20,15 +21,23 @@ from dvg_ringbuffer import RingBuffer
 import sys
 from argparse import ArgumentParser
 
+import matplotlib.pyplot as plt
+
 
 def receive_signal(signal):
-    start_chirps, known_ofdm_signal, ofdm_signal, end_chirps = crop_signal_into_parts(signal)
+    signal_frames = crop_signal_into_overlapping_frames(signal)
 
-    channel_coefficients = estimate_channel_coefficients(known_ofdm_signal)
+    llr_for_each_bit = []
+    for frame in signal_frames:
+        chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
-    llr_for_each_bit = demodulate_signal(channel_coefficients, ofdm_signal)
-    demodulated_data = decode_from_llr(llr_for_each_bit)
+        channel_coefficients_start = estimate_channel_coefficients(prefix)
+        channel_coefficients_end = estimate_channel_coefficients(endfix)
 
+        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data))
+
+
+    demodulated_data = decode_from_llr(np.array(llr_for_each_bit))
     return demodulated_data
 
 
@@ -69,5 +78,7 @@ if __name__ == "__main__":
         print(
             f"[INFO] Bit error of received file: {bit_error(demodulated_file, expected_bytes)}"
         )
+        plot_cumulative_error(demodulated_file, expected_bytes)
+        
 
     open("output", "wb").write(demodulated_file)

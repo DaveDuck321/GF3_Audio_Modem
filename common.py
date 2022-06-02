@@ -6,6 +6,13 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 
+def split_list_to_chunks_of_length(list, length):
+    index = 0
+    while index < len(list):
+        yield list[index : index + length]
+        index += length
+
+
 def save_data_to_file(location: Path, signal: np.ndarray):
     if not location.exists():
         location.mkdir(parents=True)
@@ -17,9 +24,11 @@ def save_data_to_file(location: Path, signal: np.ndarray):
 
 
 def finalize_argparse_for_sounddevice(parser: ArgumentParser):
+    # fmt: off
     parser.add_argument("--device", "-d", type=str, help="Sounddevice ID to use")
     parser.add_argument("--query_devices", "-q", action="store_true", help="List sounddevices and exit")
     args = parser.parse_args()
+    # fmt: on
 
     if args.device and args.device.isdecimal():
         args.device = int(args.device)
