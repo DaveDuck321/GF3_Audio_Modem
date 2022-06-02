@@ -20,7 +20,7 @@ CHIRP_DURATION = 1  # Seconds
 CHIRP_MIN_FREQUENCY = 1000  # Hz
 CHIRP_MAX_FREQUENCY = 10_000  # Hz
 CHIRP = signal.chirp(
-    np.linspace(0, CHIRP_DURATION, CHIRP_DURATION * SAMPLE_RATE),
+    np.linspace(0, CHIRP_DURATION, int(CHIRP_DURATION * SAMPLE_RATE)),
     CHIRP_MIN_FREQUENCY,
     CHIRP_DURATION,
     CHIRP_MAX_FREQUENCY,
@@ -52,7 +52,7 @@ LDPC_CODER = ldpc.dummy_code()
 # Peak suppression config {{{
 
 PEAK_SUPPRESSION_STATS_ENABLED = False
-PEAK_SUPPRESSION_ENABLED = False
+PEAK_SUPPRESSION_ENABLED = True
 
 _perfect_time_impulse = np.zeros(OFDM_BODY_LENGTH)
 _perfect_time_impulse[OFDM_BODY_LENGTH//2] = 1
