@@ -266,7 +266,12 @@ def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  nor
             if index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break
 
-            output_llr.append(noisy_symbol.real / var)
-            output_llr.append(noisy_symbol.imag / var)
+            if var == 0:
+                # when testing with no channel
+                output_llr.append(np.sign(noisy_symbol.real) * 1e10)
+                output_llr.append(np.sign(noisy_symbol.imag) * 1e10)
+            else:
+                output_llr.append(noisy_symbol.real / var)
+                output_llr.append(noisy_symbol.imag / var)
 
     return output_llr

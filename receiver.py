@@ -1,6 +1,6 @@
 #  vim: set ts=4 sw=4 tw=0 et :
 from OFDM import demodulate_signal
-from config import OFDM_BODY_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
+from config import OFDM_BODY_LENGTH, OFDM_SYMBOL_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
@@ -32,17 +32,18 @@ def receive_signal(signal):
 
     llr_for_each_bit = []
     for frame in signal_frames:
-        drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
+        drift_gap, drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
-        drift_to_endfix = drift_per_sample * (len(prefix) + len(data))
+        # the endfix start index is already somewhat by `crop_frame_into_parts`
+        uncorrected_drift_to_endfix = (len(prefix) + len(data)) * drift_per_sample
+        drift_to_endfix = uncorrected_drift_to_endfix - drift_gap
 
         channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, 0, drift_per_sample)
         channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample)
 
-        # slight increase in performance
-        channel_coefficients_mag = (np.abs(channel_coefficients_start) + np.abs(channel_coefficients_end))/2
-        channel_coefficients_phase = np.angle(channel_coefficients_start)
-        channel_coefficients = channel_coefficients_mag * np.exp(1j* channel_coefficients_phase)
+        # TODO: choose
+        channel_coefficients = np.fft.fft((np.fft.ifft(channel_coefficients_start) + np.fft.ifft(channel_coefficients_end)) / 2)
+        # channel_coefficients = (channel_coefficients_start + channel_coefficients_end) / 2
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients, data, normalized_variance_start, drift_per_sample))
 

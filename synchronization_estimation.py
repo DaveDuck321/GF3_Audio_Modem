@@ -72,6 +72,7 @@ def estimate_synchronization_drift(first_signal: np.ndarray, second_signal: np.n
 
     sampling_drift = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0]) - first_signal.size / 2
 
+    # print('total drift: ',-sampling_drift)
     return -sampling_drift # by convention
 
 def crop_frame_into_parts(frame: np.ndarray):
@@ -97,9 +98,9 @@ def crop_frame_into_parts(frame: np.ndarray):
 
     samples_of_data_ofdm = endfix_known_symbol_start - prefix_known_symbol_end
 
-    print(
-        f"[INFO] Expected: {samples_of_data_ofdm / OFDM_SYMBOL_LENGTH} data OFDM symbols"
-    )
+    # print(
+        # f"[INFO] Expected: {samples_of_data_ofdm / OFDM_SYMBOL_LENGTH} data OFDM symbols"
+    # )
     number_of_ofdm_data_blocks = round(samples_of_data_ofdm / OFDM_SYMBOL_LENGTH)
     start_of_ofdm_data_block = prefix_known_symbol_end
     end_of_ofdm_data_block = start_of_ofdm_data_block + OFDM_SYMBOL_LENGTH * number_of_ofdm_data_blocks
@@ -129,14 +130,33 @@ def crop_frame_into_parts(frame: np.ndarray):
     # TODO: how should we bias?
     drift_per_sample = 0.4 * chirp_drift_per_sample + 0.6 * ofdm_drift_per_sample
 
-    print(f"[INFO] Recorded drift of {drift_per_sample} per sample")
+    # Note: one test showed averaging between frames didn't help
+
+    # print(f"[INFO] Recorded drift of {drift_per_sample} per sample")
+
+    true_drift_to_endfix = (
+            (prefix_known_symbol_end - prefix_known_symbol_start)
+            + (number_of_ofdm_data_blocks * OFDM_SYMBOL_LENGTH)
+        ) * drift_per_sample
+
+    true_endfix_start = round(endfix_known_symbol_start_nodrift + true_drift_to_endfix)
+    true_endfix_end = (
+        true_endfix_start
+        + OFDM_CYCLIC_PREFIX_LENGTH
+        + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
+    )
+
+    drift_gap = true_endfix_start - endfix_known_symbol_start_nodrift
+
+    # we're losing some samples but the cyclic prefix makes it ok
 
     return (
+        drift_gap,
         drift_per_sample,
         frame[initial_chirps_start_index:initial_chirps_end_index],  # Chirp
         frame[prefix_known_symbol_start:prefix_known_symbol_end],  # Prefix
         frame[start_of_ofdm_data_block: end_of_ofdm_data_block],  # Data
-        frame[endfix_known_symbol_start:endfix_known_symbol_end],  # Endfix
+        frame[true_endfix_start:true_endfix_end],  # Endfix
         frame[final_chirps_start_index:final_chirps_end_index],  # Chirp
     )
 
@@ -148,9 +168,8 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
     known_blocks = np.split(recorded_known_ofdm_blocks, KNOWN_OFDM_REPEAT_COUNT)
 
     for block_idx, block in enumerate(known_blocks):
-        # block_drift = drift #+ drift_per_sample * OFDM_BODY_LENGTH * block_idx
-        # print(block_drift)
-        sum_of_gains += estimate_frequency_gains_from_block(block, 0)
+        block_drift = drift + drift_per_sample * OFDM_BODY_LENGTH * block_idx
+        sum_of_gains += estimate_frequency_gains_from_block(block, block_drift)
 
     channel_fft = sum_of_gains / KNOWN_OFDM_REPEAT_COUNT
 
@@ -162,5 +181,28 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
 
 def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float):
     fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH)
-    drift_corrected = fft_of_recorded_block * np.exp(-2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
+    r = np.concatenate([
+                np.arange(0,  OFDM_BODY_LENGTH//2, 1)/OFDM_BODY_LENGTH,
+                [0],
+                np.arange(-1, -OFDM_BODY_LENGTH//2, -1)[::-1]/OFDM_BODY_LENGTH
+            ])
+
+    drift_corrected = fft_of_recorded_block * np.exp(2j * np.pi * drift * r)
+
+
+    assert drift_corrected[OFDM_BODY_LENGTH//2].imag == 0
+    assert drift_corrected[0].imag == 0
+
+    assert np.max(np.abs(drift_corrected[1:OFDM_BODY_LENGTH//2] - np.conjugate(drift_corrected[OFDM_BODY_LENGTH//2+1:][::-1]))) < 1e-10
+
+    # worth keeping this plotting:
+    # plt.subplot(221)
+    # plt.plot(recorded_block)
+    # plt.subplot(222)
+    # plt.plot(np.fft.ifft(fft_of_recorded_block / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH))
+    # plt.subplot(224)
+    # ip = np.fft.ifft(drift_corrected / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH)
+    # plt.plot(ip)
+    # plt.subplot(223)
+    # plt.plot(np.fft.ifft(drift_corrected, OFDM_BODY_LENGTH))
     return drift_corrected / KNOWN_OFDM_BLOCK_FFT
