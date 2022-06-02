@@ -110,15 +110,15 @@ def crop_frame_into_parts(frame: np.ndarray):
 
     final_chirps_end_index_nodrift = final_chirps_start_index_nodrift + 2 * CHIRP.size
 
-    drift = estimate_synchronization_drift(
+    drift_per_sample = estimate_synchronization_drift(
             frame[initial_chirps_start_index:initial_chirps_end_index],
             frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
-        )
+        ) / (final_chirps_start_index_nodrift - initial_chirps_start_index)  # TODO: check
 
-    print(f"[INFO] Recorded drift of {drift} inside frame")
+    print(f"[INFO] Recorded drift of {drift_per_sample} per sample")
 
     return (
-        drift,
+        drift_per_sample,
         frame[initial_chirps_start_index:initial_chirps_end_index],  # Chirp
         frame[prefix_known_symbol_start:prefix_known_symbol_end],  # Prefix
         frame[start_of_ofdm_data_block: end_of_ofdm_data_block],  # Data
@@ -127,11 +127,12 @@ def crop_frame_into_parts(frame: np.ndarray):
     )
 
 
-def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray):
+def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray, drift_per_sample: float):
     sum_of_gains = np.zeros(OFDM_BODY_LENGTH, dtype=np.complex128)
 
     recorded_known_ofdm_blocks = recorded_known_ofdm_blocks[OFDM_CYCLIC_PREFIX_LENGTH:]
     known_blocks = np.split(recorded_known_ofdm_blocks, KNOWN_OFDM_REPEAT_COUNT)
+
     for block in known_blocks:
         sum_of_gains += estimate_frequency_gains_from_block(block)
 
@@ -139,5 +140,6 @@ def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray):
 
 
 def estimate_frequency_gains_from_block(recorded_block: np.ndarray):
-    fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH)
+    fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH) 
+    # drift_corrected = fft_of_recorded_block * np.exp(2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
     return fft_of_recorded_block / KNOWN_OFDM_BLOCK_FFT
