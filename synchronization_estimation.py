@@ -1,8 +1,9 @@
 from config import (
-    CHIRP,
     CHIRP_DURATION,
+    CHIRP,
+    KNOWN_OFDM_BLOCK_FFT,
     KNOWN_OFDM_REPEAT_COUNT,
-    NUMBER_OF_SYMBOLS_IN_FRAME,
+    MAX_NUMBER_OF_SYMBOLS_IN_FRAME,
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_SYMBOL_LENGTH,
@@ -36,10 +37,10 @@ def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
             continue
 
         expected_min_length = CHIRP_DURATION * SAMPLE_RATE + OFDM_SYMBOL_LENGTH * (
-            2 * KNOWN_OFDM_REPEAT_COUNT + NUMBER_OF_SYMBOLS_IN_FRAME["min"]
+            2 * KNOWN_OFDM_REPEAT_COUNT
         )
         expected_max_length = CHIRP_DURATION * SAMPLE_RATE + OFDM_SYMBOL_LENGTH * (
-            2 * KNOWN_OFDM_REPEAT_COUNT + NUMBER_OF_SYMBOLS_IN_FRAME["max"]
+            2 * KNOWN_OFDM_REPEAT_COUNT + MAX_NUMBER_OF_SYMBOLS_IN_FRAME
         )
         assert (
             abs(peaks[peak_index] - peaks[peak_index - 1]) > 0.99 * expected_min_length
@@ -71,12 +72,16 @@ def crop_frame_into_parts(frame: np.ndarray):
 
     prefix_known_symbol_start = initial_chirps_end_index
     prefix_known_symbol_end = (
-        prefix_known_symbol_start + KNOWN_OFDM_REPEAT_COUNT * OFDM_SYMBOL_LENGTH
+        prefix_known_symbol_start
+        + OFDM_CYCLIC_PREFIX_LENGTH
+        + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
     )
 
     endfix_known_symbol_end = final_chirps_start_index
     endfix_known_symbol_start = (
-        endfix_known_symbol_end - KNOWN_OFDM_REPEAT_COUNT * OFDM_SYMBOL_LENGTH
+        endfix_known_symbol_end
+        - OFDM_CYCLIC_PREFIX_LENGTH
+        - KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
     )
 
     samples_of_data_ofdm = endfix_known_symbol_start - prefix_known_symbol_end
@@ -96,21 +101,16 @@ def crop_frame_into_parts(frame: np.ndarray):
 
 
 def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray):
-    known_ofdm_block = OFDM.generate_known_ofdm_block()[OFDM_CYCLIC_PREFIX_LENGTH:]
-    fft_of_known_block = np.fft.fft(known_ofdm_block, OFDM_BODY_LENGTH)
-
     sum_of_gains = np.zeros(OFDM_BODY_LENGTH, dtype=np.complex128)
+
+    recorded_known_ofdm_blocks = recorded_known_ofdm_blocks[OFDM_CYCLIC_PREFIX_LENGTH:]
     known_blocks = np.split(recorded_known_ofdm_blocks, KNOWN_OFDM_REPEAT_COUNT)
     for block in known_blocks:
-        sum_of_gains += estimate_frequency_gains_from_block(block, fft_of_known_block)
+        sum_of_gains += estimate_frequency_gains_from_block(block)
 
     return np.fft.ifft(sum_of_gains / KNOWN_OFDM_REPEAT_COUNT, OFDM_BODY_LENGTH)
 
 
-def estimate_frequency_gains_from_block(
-    recorded_block: np.ndarray, expected_block_fft: np.ndarray
-):
-    fft_of_recorded_block = np.fft.fft(
-        recorded_block[OFDM_CYCLIC_PREFIX_LENGTH:], OFDM_BODY_LENGTH
-    )
-    return fft_of_recorded_block / expected_block_fft
+def estimate_frequency_gains_from_block(recorded_block: np.ndarray):
+    fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH)
+    return fft_of_recorded_block / KNOWN_OFDM_BLOCK_FFT

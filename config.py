@@ -26,11 +26,7 @@ CHIRP = signal.chirp(
     CHIRP_MAX_FREQUENCY,
 )
 
-NUMBER_OF_SYMBOLS_IN_FRAME = {
-    "min": 10,
-    "max": 200,
-}
-KNOWN_OFDM_REPEAT_COUNT = 4
+
 OFDM_BODY_LENGTH = 1 << 12
 OFDM_CYCLIC_PREFIX_LENGTH = 1 << 9
 OFDM_SYMBOL_LENGTH = OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH
@@ -38,6 +34,11 @@ OFDM_DATA_INDEX_RANGE = { # following python standard range convention
     "min": get_index_of_frequency(1000) + 1,
     "max": get_index_of_frequency(10_000),
 }
+MAX_NUMBER_OF_SYMBOLS_IN_FRAME = 128
+KNOWN_OFDM_BLOCK_FFT = np.load('known_ofdm_symbol.npy')
+KNOWN_OFDM_BLOCK = np.fft.ifft(KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH)
+KNOWN_OFDM_REPEAT_COUNT = 4
+
 
 CONSTELLATION_BITS = 2
 CONSTELLATION_SYMBOLS = {
