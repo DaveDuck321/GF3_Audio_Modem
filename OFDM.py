@@ -247,17 +247,20 @@ def modulate_bytes(data: bytes):
     return ofdm_symbols
 
 
-def demodulate_signal(channel_coefficients, signal):
-    ofdm_blocks = split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH)
+def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  total_drift: float):
+    ofdm_blocks = list(split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH))
 
     channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
 
     output_llr = []
-    for block in ofdm_blocks:
+    drifts = np.linspace(0, total_drift, len(ofdm_blocks))
+    for drift, block in zip(drifts, ofdm_blocks):
         block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
         dft_of_block = np.fft.fft(block_without_cyclic_prefix, OFDM_BODY_LENGTH)
 
         equalized_dft = dft_of_block / channel_dft
+
+        equalized_dft *= np.exp(2j * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
 
         for index, noisy_symbol in enumerate(equalized_dft):
             if index < OFDM_DATA_INDEX_RANGE["min"]:

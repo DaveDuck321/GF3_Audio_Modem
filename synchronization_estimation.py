@@ -9,8 +9,6 @@ from config import (
     OFDM_SYMBOL_LENGTH,
     SAMPLE_RATE,
 )
-import OFDM
-
 import numpy as np
 import scipy.signal as signal
 
@@ -89,12 +87,18 @@ def crop_frame_into_parts(frame: np.ndarray):
     print(
         f"[INFO] Expected: {samples_of_data_ofdm / OFDM_SYMBOL_LENGTH} data OFDM symbols"
     )
-    number_of_ofdm_blocks = round(samples_of_data_ofdm / OFDM_SYMBOL_LENGTH)
+    number_of_ofdm_data_blocks = round(samples_of_data_ofdm / OFDM_SYMBOL_LENGTH)
+    start_of_ofdm_data_block = prefix_known_symbol_end
+    end_of_ofdm_data_block = start_of_ofdm_data_block + OFDM_SYMBOL_LENGTH * number_of_ofdm_data_blocks
+
+    drift = final_chirps_start_index - (end_of_ofdm_data_block + OFDM_CYCLIC_PREFIX_LENGTH + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH)
+    print(f"[INFO] Recorded drift of {drift} inside frame")
 
     return (
+        drift,
         frame[initial_chirps_start_index:initial_chirps_end_index],  # Chirp
         frame[prefix_known_symbol_start:prefix_known_symbol_end],  # Prefix
-        frame[prefix_known_symbol_end:endfix_known_symbol_start],  # Data
+        frame[start_of_ofdm_data_block: end_of_ofdm_data_block],  # Data
         frame[endfix_known_symbol_start:endfix_known_symbol_end],  # Endfix
         frame[final_chirps_start_index:final_chirps_end_index],  # Chirp
     )
