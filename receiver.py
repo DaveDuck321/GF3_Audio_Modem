@@ -20,8 +20,9 @@ import numpy as np
 import sounddevice as sd
 from dvg_ringbuffer import RingBuffer
 
-import sys
 from argparse import ArgumentParser
+from pathlib import Path
+import sys
 
 import matplotlib.pyplot as plt
 
@@ -89,4 +90,5 @@ if __name__ == "__main__":
         plot_cumulative_error(demodulated_file, expected_bytes)
 
 
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
     open(filename, "wb").write(demodulated_file)
