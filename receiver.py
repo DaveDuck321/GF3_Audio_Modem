@@ -29,16 +29,14 @@ def receive_signal(signal):
 
     llr_for_each_bit = []
     for frame in signal_frames:
-        drift, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
+        drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
-        channel_coefficients_start = estimate_channel_coefficients(prefix)
-        channel_coefficients_end = estimate_channel_coefficients(endfix)
+        channel_coefficients_start = estimate_channel_coefficients(prefix, drift_per_sample)
+        channel_coefficients_end = estimate_channel_coefficients(endfix, drift_per_sample)
 
-        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, drift))
+        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, drift_per_sample))
 
-
-    demodulated_data = decode_from_llr(np.array(llr_for_each_bit))
-    return demodulated_data
+    return decode_from_llr(np.array(llr_for_each_bit))
 
 
 def record_until_enter_key():
