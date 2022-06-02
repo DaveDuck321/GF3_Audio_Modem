@@ -127,7 +127,7 @@ def crop_frame_into_parts(frame: np.ndarray):
     )
 
 
-def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray, drift_per_sample: float):
+def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.ndarray, drift_per_sample: float):
     sum_of_gains = np.zeros(OFDM_BODY_LENGTH, dtype=np.complex128)
 
     recorded_known_ofdm_blocks = recorded_known_ofdm_blocks[OFDM_CYCLIC_PREFIX_LENGTH:]
@@ -136,7 +136,12 @@ def estimate_channel_coefficients(recorded_known_ofdm_blocks: np.ndarray, drift_
     for block in known_blocks:
         sum_of_gains += estimate_frequency_gains_from_block(block)
 
-    return np.fft.ifft(sum_of_gains / KNOWN_OFDM_REPEAT_COUNT, OFDM_BODY_LENGTH)
+    channel_fft = sum_of_gains / KNOWN_OFDM_REPEAT_COUNT
+
+    frequency_bin_variance  = np.var(known_blocks, axis=0)
+    normalized_variance = frequency_bin_variance / (channel_fft * np.conjugate(channel_fft))
+
+    return np.fft.ifft(channel_fft, OFDM_BODY_LENGTH), normalized_variance.real
 
 
 def estimate_frequency_gains_from_block(recorded_block: np.ndarray):

@@ -9,7 +9,7 @@ from error_stats import bit_error, plot_cumulative_error
 from synchronization_estimation import (
     crop_frame_into_parts,
     crop_signal_into_overlapping_frames,
-    estimate_channel_coefficients,
+    estimate_channel_coefficients_and_variance,
 )
 from ldcp_tools import decode_from_llr
 
@@ -31,10 +31,10 @@ def receive_signal(signal):
     for frame in signal_frames:
         drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
-        channel_coefficients_start = estimate_channel_coefficients(prefix, drift_per_sample)
-        channel_coefficients_end = estimate_channel_coefficients(endfix, drift_per_sample)
+        channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, drift_per_sample)
+        channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_per_sample)
 
-        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, drift_per_sample))
+        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, normalized_variance_start, drift_per_sample))
 
     return decode_from_llr(np.array(llr_for_each_bit))
 
