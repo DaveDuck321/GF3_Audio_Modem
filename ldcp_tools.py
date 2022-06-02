@@ -23,7 +23,10 @@ def encode_bytes(data: bytes):
 
 def decode_from_llr(llr: np.ndarray):
     excess_llr_blocks = llr.size % LDPC_CODER.N
-    cropped_llr = llr[:-excess_llr_blocks]
+
+    cropped_llr = llr
+    if (excess_llr_blocks != 0):
+        cropped_llr = llr[:-excess_llr_blocks]
 
     llr_blocks_for_jossy = np.split(cropped_llr, cropped_llr.size // LDPC_CODER.N)
 
