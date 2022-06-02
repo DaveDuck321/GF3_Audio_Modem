@@ -37,6 +37,7 @@ OFDM_DATA_INDEX_RANGE = { # following python standard range convention
 MAX_NUMBER_OF_SYMBOLS_IN_FRAME = 128
 KNOWN_OFDM_BLOCK_FFT = np.load('known_ofdm_symbol.npy')
 KNOWN_OFDM_BLOCK = np.fft.ifft(KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH)
+KNOWN_OFDM_BLOCK /= np.max(np.abs(np.fft.ifft(KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH)))
 KNOWN_OFDM_REPEAT_COUNT = 4
 
 
@@ -50,11 +51,12 @@ CONSTELLATION_SYMBOLS = {
 
 LDPC_CODER = ldpc.dummy_code()
 
-# Peak suppression config {{{
 
 PEAK_SUPPRESSION_STATS_ENABLED = False
 PEAK_SUPPRESSION_ENABLED = True
+PEAK_SUPPRESSION_THRESH = 3.5 # stddevs
 
+# Peak suppression stuff {{{
 _perfect_time_impulse = np.zeros(OFDM_BODY_LENGTH)
 _perfect_time_impulse[OFDM_BODY_LENGTH//2] = 1
 _fft_impulse_approximator = np.fft.fft(_perfect_time_impulse)
@@ -66,17 +68,20 @@ PEAK_SUPPRESSION_SEQUENCE = [
     # sequence of passes through peak suppression algorithm
     # peak detection threshold (in stddevs), sample view range, impulse shift range
     # this should be tweaked more!!
-    (3.5, 50, 13),
-    (3.5, 15, 8),
-    (3.5, 10, 5),
-    (3.5, 5, 3),
-    (3.5, 4, 2),
-    (3.5, 5, 3),
+    (PEAK_SUPPRESSION_THRESH, 50, 13),
+    (PEAK_SUPPRESSION_THRESH, 15, 8),
+    (PEAK_SUPPRESSION_THRESH, 10, 5),
+    (PEAK_SUPPRESSION_THRESH, 5, 3),
+    (PEAK_SUPPRESSION_THRESH, 4, 2),
+    (PEAK_SUPPRESSION_THRESH, 5, 3),
 ]
 
 # }}}
 
+SONG_ENABLED = False
 SONG_VOLUME = 30
+
+# Song stuff {{{
 SONG_NOTES = {
     "G4": 392,
     "A4": 440,
@@ -257,14 +262,16 @@ _SONG = [
 
 # put song into chunks
 SONG = []
-while len(_SONG) > 0:
-    SONG_CHUNK = []
-    s = 0
-    while s < 192:
-        chord = _SONG.pop(0)
-        SONG_CHUNK.append(chord)
-        s += chord[0]
-    SONG.append(SONG_CHUNK)
+if SONG_ENABLED:
+    while len(_SONG) > 0:
+        SONG_CHUNK = []
+        s = 0
+        while s < 192:
+            chord = _SONG.pop(0)
+            SONG_CHUNK.append(chord)
+            s += chord[0]
+        SONG.append(SONG_CHUNK)
 
 # TODO: this is a minor hack since we're not choosing by frame
-SONG_LEN = sum((x for x, _ in SONG[0] + SONG[1]))
+SONG_LEN = sum((x for frame in SONG for x, _ in frame))
+# }}}

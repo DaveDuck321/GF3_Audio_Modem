@@ -10,6 +10,7 @@ from config import (
     PEAK_SUPPRESSION_ENABLED,
     PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR,
     PEAK_SUPPRESSION_SEQUENCE,
+    SONG_ENABLED,
     SONG_LEN,
     SONG_NOTES,
     SONG_VOLUME,
@@ -192,18 +193,21 @@ def modulate_bytes(data: bytes):
         # output of the OFDM modulator is a real (baseband) vector.
 
 
-        fun_block = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
+        if SONG_ENABLED:
+            fun_block = np.zeros(OFDM_DATA_INDEX_RANGE["min"] - 1)
 
-        song_idx = 0
-        # TODO: choose based on frame
-        for note_len, notes in [note for frame in SONG for note in frame]:
-            if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
-                for note in notes:
-                    freq = SONG_NOTES[note]
-                    fun_block[get_index_of_frequency(freq)] = 1
-            song_idx += note_len
+            song_idx = 0
+            # TODO: choose based on frame
+            for note_len, notes in [note for frame in SONG for note in frame]:
+                if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
+                    for note in notes:
+                        freq = SONG_NOTES[note]
+                        fun_block[get_index_of_frequency(freq)] = 1
+                song_idx += note_len
 
-        fun_block *= SONG_VOLUME * np.max(np.abs(block))
+            fun_block *= SONG_VOLUME * np.max(np.abs(block))
+        else:
+            fun_block = np.random.choice(list(CONSTELLATION_SYMBOLS.values()), OFDM_DATA_INDEX_RANGE["min"] - 1)
 
 
         block_with_all_freqs = np.concatenate([
