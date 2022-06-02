@@ -250,15 +250,13 @@ def modulate_bytes(data: bytes):
 def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  normalized_variance_start: np.ndarray, drift_per_sample: float):
     ofdm_blocks = list(split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH))
 
-    channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
-
     output_llr = []
     drifts = np.linspace(0, drift_per_sample * len(ofdm_blocks) * OFDM_SYMBOL_LENGTH, len(ofdm_blocks))
     for drift, block in zip(drifts, ofdm_blocks):
         block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
         dft_of_block = np.fft.fft(block_without_cyclic_prefix, OFDM_BODY_LENGTH)
 
-        equalized_dft = dft_of_block / channel_dft
+        equalized_dft = dft_of_block / channel_coefficients
         equalized_dft *= np.exp(2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
 
         for index, (noisy_symbol, var) in enumerate(zip(equalized_dft, normalized_variance_start)):
