@@ -49,7 +49,7 @@ CONSTELLATION_SYMBOLS = {
     0b11: -1 - 1j,
 }
 
-LDPC_CODER = ldpc.dummy_code()
+LDPC_CODER = ldpc.code(standard='802.16', z=64)
 
 
 PEAK_SUPPRESSION_STATS_ENABLED = False

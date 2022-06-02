@@ -6,3 +6,4 @@ transmissions/
 venv/
 /cumulative_bit_error.pdf
 /cumulative_bit_error.pgf
+/LDPC/c_ldpc.o
