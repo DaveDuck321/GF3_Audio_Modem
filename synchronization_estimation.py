@@ -127,14 +127,16 @@ def crop_frame_into_parts(frame: np.ndarray):
     )
 
 
-def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.ndarray, drift_per_sample: float):
+def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.ndarray, drift: float, drift_per_sample: float):
     sum_of_gains = np.zeros(OFDM_BODY_LENGTH, dtype=np.complex128)
 
     recorded_known_ofdm_blocks = recorded_known_ofdm_blocks[OFDM_CYCLIC_PREFIX_LENGTH:]
     known_blocks = np.split(recorded_known_ofdm_blocks, KNOWN_OFDM_REPEAT_COUNT)
 
-    for block in known_blocks:
-        sum_of_gains += estimate_frequency_gains_from_block(block)
+    for block_idx, block in enumerate(known_blocks):
+        # block_drift = drift #+ drift_per_sample * OFDM_BODY_LENGTH * block_idx
+        # print(block_drift)
+        sum_of_gains += estimate_frequency_gains_from_block(block, 0)
 
     channel_fft = sum_of_gains / KNOWN_OFDM_REPEAT_COUNT
 
@@ -144,7 +146,7 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
     return np.fft.ifft(channel_fft, OFDM_BODY_LENGTH), normalized_variance.real
 
 
-def estimate_frequency_gains_from_block(recorded_block: np.ndarray):
-    fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH) 
-    # drift_corrected = fft_of_recorded_block * np.exp(2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
-    return fft_of_recorded_block / KNOWN_OFDM_BLOCK_FFT
+def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float):
+    fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH)
+    drift_corrected = fft_of_recorded_block * np.exp(-2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
+    return drift_corrected / KNOWN_OFDM_BLOCK_FFT

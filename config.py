@@ -12,7 +12,7 @@ def get_index_of_frequency(f):
 
 AUDIO_SCALE_FACTOR = 0.3
 SAMPLE_RATE = 48_000
-MAX_RECORDING_DURATION = 120  # seconds
+MAX_RECORDING_DURATION = 5 * 60  # seconds
 RECORDING_OUTPUT_DIR = Path("recordings")
 TRANSMISSION_OUTPUT_DIR = Path("transmissions")
 
@@ -78,7 +78,7 @@ PEAK_SUPPRESSION_SEQUENCE = [
 
 # }}}
 
-SONG_ENABLED = False
+SONG_ENABLED = True
 SONG_VOLUME = 30
 
 # Song stuff {{{
@@ -93,7 +93,7 @@ SONG_NOTES = {
     "G5": 783.99,
     "A5": 880,
 }
-_SONG = [
+SONG = [
     (6, ("G4", "B4", "D5")),
     (6, ("A4", "C#5", "E5")),
     (4, ("A4",)),
@@ -257,21 +257,43 @@ _SONG = [
     # --
     (4, ("E5",)),
     (8, ("D5",)),
+    (1, ("A4",)),
+    (1, ("B4",)),
+    (1, ("D5",)),
+    (1, ("B4",)),
+    # --
+    (2, ("F#5",)),
+    (1, tuple()),
+    (2, ("F#5",)),
+    (1, tuple()),
+    (6, ("E5",)),
+    (1, ("A4",)),
+    (1, ("B4",)),
+    (1, ("D5",)),
+    (1, ("B4",)),
+    # --
+    (4, ("A5",)),
+    (2, ("C#5",)),
+    (3, ("D5",)),
+    (1, ("C#5",)),
+    (2, ("B4",)),
+    (1, ("A4",)),
+    (1, ("B4",)),
+    (1, ("D5",)),
+    (1, ("B4",)),
+    # --
+    (4, ("D5",)),
+    (2, ("E5",)),
+    (3, ("C#5",)),
+    (1, ("B4",)),
+    (3, ("A4",)),
+    (1, tuple()),
+    (2, ("A4",)),
+    # --
+    (4, ("E5",)),
+    (8, ("D5",)),
     (4, tuple()),
 ]
 
-# put song into chunks
-SONG = []
-if SONG_ENABLED:
-    while len(_SONG) > 0:
-        SONG_CHUNK = []
-        s = 0
-        while s < 192:
-            chord = _SONG.pop(0)
-            SONG_CHUNK.append(chord)
-            s += chord[0]
-        SONG.append(SONG_CHUNK)
-
-# TODO: this is a minor hack since we're not choosing by frame
-SONG_LEN = sum((x for frame in SONG for x, _ in frame))
+SONG_LEN = sum((x for x, _ in SONG))
 # }}}
