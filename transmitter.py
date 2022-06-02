@@ -9,13 +9,13 @@ from config import (
     SAMPLE_RATE,
     TRANSMISSION_OUTPUT_DIR,
 )
-
 from common import (
     finalize_argparse_for_sounddevice,
     save_data_to_file,
     set_audio_device_or_warn,
     split_list_to_chunks_of_length,
 )
+from metadata import generate_bytes_for_transmission
 from signal_builder import SignalBuilder
 import OFDM
 import ldcp_tools
@@ -62,8 +62,9 @@ def modulate_into_frames(ofdm_symbols):
     return signal_builder.get_signal()
 
 
-def modulate_file(file_data: bytes):
-    transmission = ldcp_tools.encode_bytes(file_data)
+def modulate_file(filename: str, file_data: bytes):
+    data_for_transmission = generate_bytes_for_transmission(filename, file_data)
+    transmission = ldcp_tools.encode_bytes(data_for_transmission)
 
     signal_builder = SignalBuilder()
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     print("Building OFDM symbols, please wait... ", flush=True)
 
     with open(args.file, "rb") as input_file:
-        modulated_signal = modulate_file(input_file.read())
+        modulated_signal = modulate_file(args.file, input_file.read())
 
     save_data_to_file(TRANSMISSION_OUTPUT_DIR, modulated_signal)
 

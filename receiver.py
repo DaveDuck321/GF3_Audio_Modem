@@ -6,6 +6,7 @@ from common import (
     finalize_argparse_for_sounddevice,
 )
 from error_stats import bit_error, plot_cumulative_error
+from metadata import decode_received_file
 from synchronization_estimation import (
     crop_frame_into_parts,
     crop_signal_into_overlapping_frames,
@@ -38,23 +39,8 @@ def receive_signal(signal):
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, normalized_variance_start, drift_per_sample))
 
-
-        # channel_coefficients_start = estimate_channel_coefficients(prefix, 0, drift_per_sample)
-        # channel_coefficients_end = estimate_channel_coefficients(endfix, drift_to_endfix, drift_per_sample)
-
-        # channel_mag = (np.abs(channel_coefficients_start) + np.abs(channel_coefficients_end))/2
-        # channel_phase = np.angle(channel_coefficients_start)
-        # channel_coefficients = channel_mag * np.exp(1j * channel_phase)
-
-        # plt.plot(channel_coefficients_start, linewidth=0.1)
-        # plt.plot(channel_coefficients_end, linewidth=0.1)
-        # plt.plot(channel_coefficients, linewidth=0.1)
-        # plt.savefig('channel_coeffs.pdf')
-        # channel_coefficients_time = np.fft.ifft(channel_coefficients)
-
-        # llr_for_each_bit.extend(demodulate_signal(channel_coefficients_time, data, drift_per_sample))
-
-    return decode_from_llr(np.array(llr_for_each_bit))
+    decoded_bytes = decode_from_llr(np.array(llr_for_each_bit))
+    return decode_received_file(decoded_bytes)
 
 
 def record_until_enter_key():
@@ -84,7 +70,7 @@ if __name__ == "__main__":
         set_audio_device_or_warn(args)
         recorded_signal = record_until_enter_key()
 
-    demodulated_file = receive_signal(recorded_signal)
+    filename, demodulated_file = receive_signal(recorded_signal)
 
     if args.expected_output is not None:
         with open(args.expected_output, "rb") as expected_file:
@@ -97,4 +83,4 @@ if __name__ == "__main__":
         plot_cumulative_error(demodulated_file, expected_bytes)
 
 
-    open("output", "wb").write(demodulated_file)
+    open(filename, "wb").write(demodulated_file)
