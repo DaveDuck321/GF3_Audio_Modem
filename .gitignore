@@ -4,3 +4,5 @@ bin/
 recordings/
 transmissions/
 venv/
+/cumulative_bit_error.pdf
+/cumulative_bit_error.pgf
