@@ -5,6 +5,7 @@ from config import (
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
+    OFDM_SYMBOL_LENGTH,
     PEAK_SUPPRESSION_STATS_ENABLED,
     PEAK_SUPPRESSION_ENABLED,
     PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR,
@@ -15,7 +16,7 @@ from config import (
     SONG,
     get_index_of_frequency,
 )
-from signal_builder import SignalBuilder
+from common import split_list_to_chunks_of_length
 
 import numpy as np
 import scipy
@@ -167,6 +168,7 @@ def suppress_peaks(data: np.ndarray):
 
     return improved_time_domain_block
 
+
 def modulate_bytes(data: bytes):
     length_of_data_per_ofdm_block = (
         OFDM_DATA_INDEX_RANGE["max"] - OFDM_DATA_INDEX_RANGE["min"]
@@ -184,7 +186,7 @@ def modulate_bytes(data: bytes):
 
     avg_suppression = 0
 
-    ofdm_signal = SignalBuilder()
+    ofdm_symbols = []
     for block_idx, block in enumerate(data_blocks):
         # Information is only mapped to frequency bins 1 to 511.
         # Frequency bins 513 to 1023 contain the reverse ordered conjugate
@@ -235,31 +237,21 @@ def modulate_bytes(data: bytes):
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
 
-        ofdm_signal.append_signal_part(normalized_block)
+        ofdm_symbols.append(normalized_block)
 
     if PEAK_SUPPRESSION_STATS_ENABLED:
         avg_suppression /= len(data_blocks)
         print(f"Average peak suppression: {avg_suppression:.2f}%", flush=True)
 
-    return ofdm_signal.get_signal()
-
-
-def map_received_constellation_symbol_to_value(symbol):
-    return sorted(
-        CONSTELLATION_SYMBOLS,
-        key=lambda value: abs(symbol - CONSTELLATION_SYMBOLS[value]),
-    )[0]
+    return ofdm_symbols
 
 
 def demodulate_signal(channel_coefficients, signal):
-    ofdm_blocks = np.split(
-        signal, signal.size // (OFDM_BODY_LENGTH + OFDM_CYCLIC_PREFIX_LENGTH)
-    )  # TODO: WHAT HAPPENS IF WE LOSE A SAMPLE HERE?
+    ofdm_blocks = split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH)
 
     channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
 
     output_llr = []
-
     for block in ofdm_blocks:
         block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
         dft_of_block = np.fft.fft(block_without_cyclic_prefix, OFDM_BODY_LENGTH)
@@ -276,4 +268,4 @@ def demodulate_signal(channel_coefficients, signal):
             output_llr.append(noisy_symbol.real)
             output_llr.append(noisy_symbol.imag)
 
-    return np.array(output_llr)
+    return output_llr
