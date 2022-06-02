@@ -59,9 +59,6 @@ def pad_symbols(symbols, alignment):
     return symbols
 
 
-def generate_known_ofdm_block():
-    return np.load('known_ofdm_symbol.npy')
-
 def suppress_peaks(data: np.ndarray):
     if not PEAK_SUPPRESSION_ENABLED:
         return data
