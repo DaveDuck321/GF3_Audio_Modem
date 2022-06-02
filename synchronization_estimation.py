@@ -1,3 +1,4 @@
+#  vim: set ts=4 sw=4 tw=0 et :
 from config import (
     CHIRP_DURATION,
     CHIRP,
@@ -12,6 +13,7 @@ from config import (
 import numpy as np
 import scipy.signal as signal
 
+import matplotlib.pyplot as plt
 
 def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
     chirp_convolution = signal.convolve(transmitted_signal, CHIRP[::-1])
@@ -60,6 +62,17 @@ def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
 
     return frames
 
+def estimate_synchronization_drift(first_chirps, second_chirps):
+
+    chirp_cross_correlation = signal.correlate(first_chirps, second_chirps, mode='same')
+    maximum_cross_correlation_index = np.argmax(chirp_cross_correlation)
+
+    t = np.linspace(maximum_cross_correlation_index-2, maximum_cross_correlation_index+2, 5)  # Take 5 point around the correlation peak
+    quadratic_fit_of_peak = np.polyfit(t, chirp_cross_correlation[maximum_cross_correlation_index-2:maximum_cross_correlation_index+3], 2)
+
+    sampling_drift = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0]) - SAMPLE_RATE - 1
+
+    return -sampling_drift # by convention
 
 def crop_frame_into_parts(frame: np.ndarray):
     initial_chirps_start_index = 0
@@ -91,7 +104,17 @@ def crop_frame_into_parts(frame: np.ndarray):
     start_of_ofdm_data_block = prefix_known_symbol_end
     end_of_ofdm_data_block = start_of_ofdm_data_block + OFDM_SYMBOL_LENGTH * number_of_ofdm_data_blocks
 
-    drift = final_chirps_start_index - (end_of_ofdm_data_block + OFDM_CYCLIC_PREFIX_LENGTH + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH)
+    final_chirps_start_index_nodrift = prefix_known_symbol_end \
+            + number_of_ofdm_data_blocks * OFDM_SYMBOL_LENGTH \
+            + (endfix_known_symbol_end - endfix_known_symbol_start)
+
+    final_chirps_end_index_nodrift = final_chirps_start_index_nodrift + 2 * CHIRP.size
+
+    drift = estimate_synchronization_drift(
+            frame[initial_chirps_start_index:initial_chirps_end_index],
+            frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
+        )
+
     print(f"[INFO] Recorded drift of {drift} inside frame")
 
     return (

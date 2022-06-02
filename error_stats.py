@@ -1,6 +1,15 @@
 from sys import argv
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+
+matplotlib.use("pgf")
+matplotlib.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    'font.family': 'serif',
+    'text.usetex': True,
+    'pgf.rcfonts': False,
+})
 
 def human_readable_compare_files(filename1, filename2):
     bytes1 = open(filename1, 'rb').read()
@@ -31,15 +40,18 @@ def plot_cumulative_error(bytes1: bytes, bytes2: bytes):
     best_fit = np.polyfit(np.linspace(0, final_index, final_index), cumulative_errors[:final_index], 1)
     t = np.linspace(0, len(cumulative_errors), 2)
 
+
+
     plt.title("Cumulative bit errors")
     plt.xlabel("Total bits processed")
     plt.ylabel("Total bit errors")
     plt.plot(t, np.poly1d(best_fit)(t), label="Linear 10% trend")
     plt.plot(cumulative_errors, label="Demodulation errors")
-    plt.axvline(x = 0, ls='--')
-    plt.axvline(x = final_index, ls='--')
+    # plt.axvline(x = 0, ls='--')
+    # plt.axvline(x = final_index, ls='--')
     plt.legend()
-    plt.show()
+    plt.savefig('cumulative_bit_error.pgf')
+    plt.savefig('cumulative_bit_error.pdf')
 
 def bit_error(bytes1, bytes2, include_length_error=True):
     if include_length_error:

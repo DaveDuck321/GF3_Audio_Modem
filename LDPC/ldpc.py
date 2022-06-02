@@ -10,7 +10,7 @@ class dummy_code:
     def encode(self, data):
         assert len(data) == self.K
         return data
-    
+
     def decode(self, llr_data):
         assert len(llr_data) == self.K
         return llr_data, 0
@@ -34,12 +34,12 @@ class code:
         self.K = self.Nv - self.Nc
         return
 
-    
+
 
     def assign_proto(self):
         """ Generates arrays to enable the construction of
         IEEE standard-compliant LDPC codes
-        
+
         Parameters
         ----------
         standard: string
@@ -51,13 +51,13 @@ class code:
         z: int
         Optional parameter (not needed for for 802.16, required for 802.11n)
         Specifies the protograph expansion factor, freely chooseable >= 3 for
-        IEEE 802.16, restricted to (27, 54, 81) for IEEE 802.11n 
-        
+        IEEE 802.16, restricted to (27, 54, 81) for IEEE 802.11n
+
         ptype: character
         Optional parameter.
         Either A or B for 802.16 rates 2/3 and 3/4 where two options are
         specified in the standard. Parameter unused for all other codes.
-        
+
         Returns
         -------
         np.ndarray
@@ -285,53 +285,53 @@ class code:
         else:
             raise NameError('IEEE standard unknown')
         return proto
-    
+
 
     def pcmat(self):
         """ Converts from a protograph to an LDPC parity-check matrix.
         This function is not used in the live system but is made available
         e.g. if one wants to visualise the actual parity-check matrix.
-        
+
         Returns
         -------
         np.ndarray
         Parity-check matrix for the LDPC code
         """
-        
+
         # traverses protograph row/column-wise and assigns all-zero submatrices
         # where the protograph entry is -1, or suitably cyclic-shifted zxz identity
         # matrices where the entry is not -1. Note that use of "np.roll" which
         # operates a cyclic shift of the columns by proto[row,col]%z, and note
         # that the mod z at the end is merely cosmetic since np.roll will
         # natively cyclic shift modulo z if asked to roll a matrix by a shift
-        # that exceeds the matrix dimensions. 
+        # that exceeds the matrix dimensions.
         proto = self.proto
         z = self.z
         pcmat = np.zeros((z*len(proto),z*len(proto[0])),dtype=int)
         (row,col) = np.nonzero(proto != -1)
         for j in range(len(row)):
             pcmat[row[j]*z:row[j]*z+z,col[j]*z:col[j]*z+z] = np.roll(np.eye(z),proto[row[j],col[j]]%z,1)
-        
+
         return pcmat
 
-   
+
     def prepare_decoder(self):
-        """ Generates the elements required for the LDPC decoder from the 
+        """ Generates the elements required for the LDPC decoder from the
         protograph.
 
         Parameters
         ----------
         proto: array
         Specifies the protograph for the code.
-        
+
         z: int
         Specifies the expansion factor for the protograph
-        
+
         Returns
         -------
         np.array
         vdeg vector of variable node degrees
-        
+
         np.array
         cdeg vector of constraint node degrees
 
@@ -339,18 +339,18 @@ class code:
         intrlv vector specifies the interleaver between variable node messages
         and constraint node messages (from a variable node perspective)
         The messages are assumed ordered as required for constraint node processing
-        (which is the "harder" processing) and must be addressed through this 
+        (which is the "harder" processing) and must be addressed through this
         interleaver when processing variable nodes (which is the "easier" processing)
         """
 
         proto = self.proto
         z = self.z
-        
+
         # This method operates by assigning interleaver entries and "flagging" them
         # as it traverses the parity-check matrix, so that later visits to the same
         # variable (or constraint) node know to move on to the next available message
         # connection ("port") in the node.
-        
+
         # Variable node degrees and constraint node degrees are expanded from the
         # "degrees" in the protograph by a factor of z. Note that each column in
         # the protograph results in z columns of the same degree in the actual code,
@@ -359,7 +359,7 @@ class code:
         vdeg = np.repeat(np.sum(proto != -1, 0), z)
         # Cumulative degrees with a 0 inserted at the start because we need the
         # cumulation "up to and NOT including" the degree of the current node,
-        # whereas numpy's cumsum gives us the degree "up to and including" 
+        # whereas numpy's cumsum gives us the degree "up to and including"
         # Note that cumvdeg and cumcdeg will be one element too long than
         # we need (we will never use the last entry)
         cumcdeg = np.insert(np.cumsum(cdeg),0,0)
@@ -423,7 +423,7 @@ class code:
         K = Kp*z # length of information
         if len(info) != K:
             raise NameError('information word length not compatible with proto and z')
-    
+
         # x is the codeword, composed of K bits information and N-K bits parity
         x = np.zeros(N, dtype=int)
         x[0:K] = info # pre-fill the first K bits with the information
@@ -445,7 +445,7 @@ class code:
         # designed so that the coefficient of the parity symbol in that equation is the
         # identity matrix, but there are a few exceptions where the coefficient is not
         # an identity. The following few lines compute that coefficient and compute its
-        # inverse. 
+        # inverse.
         toff = np.zeros(z, dtype = int)
         ind = np.nonzero(proto[:,Kp] != -1)[0]
         for j in ind.tolist():
@@ -455,7 +455,7 @@ class code:
         # the coefficients in proto in column Kp come in pairs except one coefficient,
         # resulting in a single coefficient for the first parity symbol. If this is
         # not the case, call an error.
-        if len(tnz) != 1: 
+        if len(tnz) != 1:
             raise NameError('The offsets in colum Kp+1 of proto do not add to a single offset')
         toff = tnz[0]
         # now compute the first parity symbol as tp times the inverse coefficient
@@ -473,7 +473,7 @@ class code:
 
         return(np.reshape(x,-1))
 
-                            
+
     def decode(self, ch, dectype='sumprod2', corr_factor=0.7):
         vdeg = self.vdeg
         cdeg = self.cdeg
