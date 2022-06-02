@@ -31,10 +31,28 @@ def receive_signal(signal):
     for frame in signal_frames:
         drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
-        channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, drift_per_sample)
-        channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_per_sample)
+        drift_to_endfix = drift_per_sample * (len(prefix) + len(data))
+
+        channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, 0, drift_per_sample)
+        channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample)
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, normalized_variance_start, drift_per_sample))
+
+
+        # channel_coefficients_start = estimate_channel_coefficients(prefix, 0, drift_per_sample)
+        # channel_coefficients_end = estimate_channel_coefficients(endfix, drift_to_endfix, drift_per_sample)
+
+        # channel_mag = (np.abs(channel_coefficients_start) + np.abs(channel_coefficients_end))/2
+        # channel_phase = np.angle(channel_coefficients_start)
+        # channel_coefficients = channel_mag * np.exp(1j * channel_phase)
+
+        # plt.plot(channel_coefficients_start, linewidth=0.1)
+        # plt.plot(channel_coefficients_end, linewidth=0.1)
+        # plt.plot(channel_coefficients, linewidth=0.1)
+        # plt.savefig('channel_coeffs.pdf')
+        # channel_coefficients_time = np.fft.ifft(channel_coefficients)
+
+        # llr_for_each_bit.extend(demodulate_signal(channel_coefficients_time, data, drift_per_sample))
 
     return decode_from_llr(np.array(llr_for_each_bit))
 
@@ -77,6 +95,6 @@ if __name__ == "__main__":
             f"[INFO] Bit error of received file: {bit_error(demodulated_file, expected_bytes)}"
         )
         plot_cumulative_error(demodulated_file, expected_bytes)
-        
+
 
     open("output", "wb").write(demodulated_file)

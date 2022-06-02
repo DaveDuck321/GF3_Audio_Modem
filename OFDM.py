@@ -198,11 +198,11 @@ def modulate_bytes(data: bytes):
 
             song_idx = 0
             # TODO: choose based on frame
-            for note_len, notes in [note for frame in SONG for note in frame]:
+            for note_len, notes in SONG:
                 if song_idx <= block_idx % SONG_LEN < song_idx + note_len:
                     for note in notes:
                         freq = SONG_NOTES[note]
-                        fun_block[get_index_of_frequency(freq)] = 1
+                        fun_block[get_index_of_frequency(freq)] += 1
                 song_idx += note_len
 
             fun_block *= SONG_VOLUME * np.max(np.abs(block))
@@ -268,7 +268,7 @@ def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  nor
             if index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break
 
-            output_llr.append(np.sqrt(2) * noisy_symbol.real / var)
-            output_llr.append(np.sqrt(2) * noisy_symbol.imag / var)
+            output_llr.append(noisy_symbol.real / var)
+            output_llr.append(noisy_symbol.imag / var)
 
     return output_llr
