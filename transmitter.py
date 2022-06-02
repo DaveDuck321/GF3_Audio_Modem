@@ -52,10 +52,8 @@ def modulate_into_frames(ofdm_symbols):
 
         # End-amble
         #   known OFDM symbols
+        signal_builder.append_signal_part(KNOWN_OFDM_BLOCK[-OFDM_CYCLIC_PREFIX_LENGTH:])
         for _ in range(KNOWN_OFDM_REPEAT_COUNT):
-            signal_builder.append_signal_part(
-                KNOWN_OFDM_BLOCK[-OFDM_CYCLIC_PREFIX_LENGTH:]
-            )
             signal_builder.append_signal_part(KNOWN_OFDM_BLOCK)
 
         # single chirp
@@ -80,7 +78,8 @@ def modulate_file(file_data: bytes):
 
 
 def transmit_signal(signal):
-    sd.play(AUDIO_SCALE_FACTOR * signal, samplerate=SAMPLE_RATE, blocking=True)
+    mono_channel = np.array([signal, np.zeros(signal.size)]).transpose()
+    sd.play(AUDIO_SCALE_FACTOR * mono_channel, samplerate=SAMPLE_RATE, blocking=True)
 
 
 if __name__ == "__main__":
