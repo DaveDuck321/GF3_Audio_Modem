@@ -62,15 +62,15 @@ def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
 
     return frames
 
-def estimate_synchronization_drift(first_chirps, second_chirps):
-
-    chirp_cross_correlation = signal.correlate(first_chirps, second_chirps, mode='same')
-    maximum_cross_correlation_index = np.argmax(chirp_cross_correlation)
+def estimate_synchronization_drift(first_signal: np.ndarray, second_signal: np.ndarray):
+    assert first_signal.size == second_signal.size
+    signal_cross_correlation = signal.correlate(first_signal, second_signal, mode='same')
+    maximum_cross_correlation_index = np.argmax(signal_cross_correlation)
 
     t = np.linspace(maximum_cross_correlation_index-2, maximum_cross_correlation_index+2, 5)  # Take 5 point around the correlation peak
-    quadratic_fit_of_peak = np.polyfit(t, chirp_cross_correlation[maximum_cross_correlation_index-2:maximum_cross_correlation_index+3], 2)
+    quadratic_fit_of_peak = np.polyfit(t, signal_cross_correlation[maximum_cross_correlation_index-2:maximum_cross_correlation_index+3], 2)
 
-    sampling_drift = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0]) - SAMPLE_RATE - 1
+    sampling_drift = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0]) - first_signal.size / 2
 
     return -sampling_drift # by convention
 
@@ -104,16 +104,30 @@ def crop_frame_into_parts(frame: np.ndarray):
     start_of_ofdm_data_block = prefix_known_symbol_end
     end_of_ofdm_data_block = start_of_ofdm_data_block + OFDM_SYMBOL_LENGTH * number_of_ofdm_data_blocks
 
-    final_chirps_start_index_nodrift = prefix_known_symbol_end \
-            + number_of_ofdm_data_blocks * OFDM_SYMBOL_LENGTH \
-            + (endfix_known_symbol_end - endfix_known_symbol_start)
+    endfix_known_symbol_start_nodrift = prefix_known_symbol_end \
+            + number_of_ofdm_data_blocks * OFDM_SYMBOL_LENGTH
 
+    endfix_known_symbol_end_nodrift = (
+        endfix_known_symbol_start_nodrift
+        + OFDM_CYCLIC_PREFIX_LENGTH
+        + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
+    )
+
+    final_chirps_start_index_nodrift = endfix_known_symbol_end_nodrift
     final_chirps_end_index_nodrift = final_chirps_start_index_nodrift + 2 * CHIRP.size
 
-    drift_per_sample = estimate_synchronization_drift(
+    chirp_drift_per_sample = estimate_synchronization_drift(
             frame[initial_chirps_start_index:initial_chirps_end_index],
             frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
-        ) / (final_chirps_start_index_nodrift - initial_chirps_start_index)  # TODO: check
+        ) / (final_chirps_start_index - initial_chirps_start_index)
+
+    ofdm_drift_per_sample = estimate_synchronization_drift(
+            frame[prefix_known_symbol_start:prefix_known_symbol_end],
+            frame[endfix_known_symbol_start_nodrift:endfix_known_symbol_end_nodrift]
+        ) / (endfix_known_symbol_start - prefix_known_symbol_start)
+
+    # TODO: how should we bias?
+    drift_per_sample = 0.4 * chirp_drift_per_sample + 0.6 * ofdm_drift_per_sample
 
     print(f"[INFO] Recorded drift of {drift_per_sample} per sample")
 

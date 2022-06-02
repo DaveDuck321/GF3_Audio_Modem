@@ -1,3 +1,4 @@
+#  vim: set ts=4 sw=4 tw=0 et :
 from OFDM import demodulate_signal
 from config import OFDM_BODY_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
 from common import (
@@ -37,7 +38,12 @@ def receive_signal(signal):
         channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, 0, drift_per_sample)
         channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample)
 
-        llr_for_each_bit.extend(demodulate_signal(channel_coefficients_start, data, normalized_variance_start, drift_per_sample))
+        # slight increase in performance
+        channel_coefficients_mag = (np.abs(np.fft.fft(channel_coefficients_start, OFDM_BODY_LENGTH)) + np.abs(np.fft.fft(channel_coefficients_end))) / 2
+        channel_coefficients_phase = np.angle(np.fft.fft(channel_coefficients_start))
+        channel_coefficients = np.fft.ifft(channel_coefficients_mag * np.exp(1j* channel_coefficients_phase), OFDM_BODY_LENGTH)
+
+        llr_for_each_bit.extend(demodulate_signal(channel_coefficients, data, normalized_variance_start, drift_per_sample))
 
     decoded_bytes = decode_from_llr(np.array(llr_for_each_bit))
     return decode_received_file(decoded_bytes)
