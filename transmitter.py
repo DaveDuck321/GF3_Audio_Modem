@@ -18,7 +18,7 @@ from common import (
 from metadata import generate_bytes_for_transmission
 from signal_builder import SignalBuilder
 import OFDM
-import ldcp_tools
+import ldpc_tools
 
 import numpy as np
 import sounddevice as sd
@@ -64,7 +64,7 @@ def modulate_into_frames(ofdm_symbols):
 
 def modulate_file(filename: str, file_data: bytes):
     data_for_transmission = generate_bytes_for_transmission(filename, file_data)
-    transmission = ldcp_tools.encode_bytes(data_for_transmission)
+    transmission = ldpc_tools.encode_bytes(data_for_transmission)
 
     signal_builder = SignalBuilder()
 

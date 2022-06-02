@@ -12,7 +12,7 @@ from synchronization_estimation import (
     crop_signal_into_overlapping_frames,
     estimate_channel_coefficients_and_variance,
 )
-from ldcp_tools import decode_from_llr
+from ldpc_tools import decode_from_llr
 
 
 import numpy as np
