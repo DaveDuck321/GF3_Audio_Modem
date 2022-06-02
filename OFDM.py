@@ -247,7 +247,7 @@ def modulate_bytes(data: bytes):
     return ofdm_symbols
 
 
-def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  drift_per_sample: float):
+def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  normalized_variance_start: np.ndarray, drift_per_sample: float):
     ofdm_blocks = list(split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH))
 
     channel_dft = np.fft.fft(channel_coefficients.real, OFDM_BODY_LENGTH)
@@ -261,14 +261,14 @@ def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  dri
         equalized_dft = dft_of_block / channel_dft
         equalized_dft *= np.exp(2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
 
-        for index, noisy_symbol in enumerate(equalized_dft):
+        for index, (noisy_symbol, var) in enumerate(zip(equalized_dft, normalized_variance_start)):
             if index < OFDM_DATA_INDEX_RANGE["min"]:
                 continue  # These frequencies contain no data
 
             if index >= OFDM_DATA_INDEX_RANGE["max"]:
                 break
 
-            output_llr.append(noisy_symbol.real)
-            output_llr.append(noisy_symbol.imag)
+            output_llr.append(np.sqrt(2) * noisy_symbol.real / var)
+            output_llr.append(np.sqrt(2) * noisy_symbol.imag / var)
 
     return output_llr
