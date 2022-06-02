@@ -157,7 +157,7 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
     frequency_bin_variance  = np.var(known_blocks, axis=0)
     normalized_variance = frequency_bin_variance / (channel_fft * np.conjugate(channel_fft))
 
-    return np.fft.ifft(channel_fft, OFDM_BODY_LENGTH), normalized_variance.real
+    return channel_fft, normalized_variance.real
 
 
 def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float):

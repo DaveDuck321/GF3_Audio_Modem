@@ -39,9 +39,9 @@ def receive_signal(signal):
         channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample)
 
         # slight increase in performance
-        channel_coefficients_mag = (np.abs(np.fft.fft(channel_coefficients_start, OFDM_BODY_LENGTH)) + np.abs(np.fft.fft(channel_coefficients_end))) / 2
-        channel_coefficients_phase = np.angle(np.fft.fft(channel_coefficients_start))
-        channel_coefficients = np.fft.ifft(channel_coefficients_mag * np.exp(1j* channel_coefficients_phase), OFDM_BODY_LENGTH)
+        channel_coefficients_mag = (np.abs(channel_coefficients_start) + np.abs(channel_coefficients_end))/2
+        channel_coefficients_phase = np.angle(channel_coefficients_start)
+        channel_coefficients = channel_coefficients_mag * np.exp(1j* channel_coefficients_phase)
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients, data, normalized_variance_start, drift_per_sample))
 
