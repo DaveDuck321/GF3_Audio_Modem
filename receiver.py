@@ -5,7 +5,7 @@ from common import (
     set_audio_device_or_warn,
     finalize_argparse_for_sounddevice,
 )
-from error_stats import bit_error
+from error_stats import bit_error, plot_cumulative_error
 from synchronization_estimation import (
     crop_frame_into_parts,
     crop_signal_into_overlapping_frames,
@@ -78,5 +78,7 @@ if __name__ == "__main__":
         print(
             f"[INFO] Bit error of received file: {bit_error(demodulated_file, expected_bytes)}"
         )
+        plot_cumulative_error(demodulated_file, expected_bytes)
+        
 
     open("output", "wb").write(demodulated_file)
