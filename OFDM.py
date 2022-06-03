@@ -227,9 +227,15 @@ def modulate_bytes(data: bytes):
         improved_time_domain_block = suppress_peaks(time_domain_block_with_peaks)
 
         if PEAK_SUPPRESSION_STATS_ENABLED:
-            suppression_prc = 100 - 100 * np.max(np.abs(improved_time_domain_block))/np.max(np.abs(time_domain_block_with_peaks))
+            original_peak = np.max(np.abs(time_domain_block_with_peaks))
+            improved_peak = np.max(np.abs(improved_time_domain_block))
+            original_papr = original_peak/np.sqrt(time_domain_block_with_peaks.var())
+            improved_papr = improved_peak/np.sqrt(improved_time_domain_block.var())
+            suppression_prc = 100 - 100 * improved_peak/original_peak
             avg_suppression += suppression_prc
-            print(f"[{block_idx+1}/{len(data_blocks)}] Symbol peak suppression: {suppression_prc:.2f}%")
+            print(f"[{block_idx+1}/{len(data_blocks)}] "
+                  f"Peak suppression: {suppression_prc:.2f}%, "
+                  f"PAPR: {original_papr:.2f} -> {improved_papr:.2f}")
 
         block_with_cyclic_prefix = np.concatenate(
             [improved_time_domain_block[-OFDM_CYCLIC_PREFIX_LENGTH:], improved_time_domain_block]
