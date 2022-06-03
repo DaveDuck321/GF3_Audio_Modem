@@ -278,10 +278,10 @@ def demodulate_signal(channel_coefficients_fft: np.ndarray, signal: np.ndarray, 
 
             if var == 0:
                 # when testing with no channel
-                output_llr.append(np.sign(noisy_symbol.real) * 1e10)
                 output_llr.append(np.sign(noisy_symbol.imag) * 1e10)
+                output_llr.append(np.sign(noisy_symbol.real) * 1e10)
             else:
-                output_llr.append(noisy_symbol.real / var)
                 output_llr.append(noisy_symbol.imag / var)
+                output_llr.append(noisy_symbol.real / var)
 
     return output_llr

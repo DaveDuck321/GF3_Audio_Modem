@@ -44,8 +44,8 @@ KNOWN_OFDM_REPEAT_COUNT = 4
 CONSTELLATION_BITS = 2
 CONSTELLATION_SYMBOLS = {
     0b00: +1 + 1j,
-    0b01: +1 - 1j,
-    0b10: -1 + 1j,
+    0b01: -1 + 1j,
+    0b10: +1 - 1j,
     0b11: -1 - 1j,
 }
 
