@@ -111,12 +111,6 @@ def crop_frame_into_parts(frame: np.ndarray):
         + KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
     )
 
-    final_chirps_start_index_nodrift = endfix_known_symbol_end_nodrift
-    final_chirps_end_index_nodrift = final_chirps_start_index_nodrift + 2 * CHIRP.size
-
-    no_drift_frame = np.zeros(final_chirps_end_index_nodrift - final_chirps_start_index_nodrift)
-    no_drift_frame[: min(final_chirps_end_index_nodrift, frame.size) - final_chirps_start_index_nodrift] += frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
-
     drift_per_sample = estimate_synchronization_drift(
             frame[prefix_known_symbol_start:prefix_known_symbol_end],
             frame[endfix_known_symbol_start_nodrift:endfix_known_symbol_end_nodrift]

@@ -1,7 +1,9 @@
 # vim: set ts=4 sw=4 tw=0 et :
 from config import (
+    CHIRP,
     CONSTELLATION_BITS,
     CONSTELLATION_SYMBOLS,
+    KNOWN_OFDM_REPEAT_COUNT,
     OFDM_BODY_LENGTH,
     OFDM_CYCLIC_PREFIX_LENGTH,
     OFDM_DATA_INDEX_RANGE,
@@ -247,16 +249,18 @@ def modulate_bytes(data: bytes):
     return ofdm_symbols
 
 
-def demodulate_signal(channel_coefficients: np.ndarray, signal: np.ndarray,  normalized_variance_start: np.ndarray, drift_per_sample: float):
+def demodulate_signal(channel_coefficients_fft: np.ndarray, signal: np.ndarray,  normalized_variance_start: np.ndarray, drift_per_sample: float):
     ofdm_blocks = list(split_list_to_chunks_of_length(signal, OFDM_SYMBOL_LENGTH))
 
     output_llr = []
-    drifts = np.linspace(0, drift_per_sample * len(ofdm_blocks) * OFDM_SYMBOL_LENGTH, len(ofdm_blocks))
+    frame_offset_drift = drift_per_sample * KNOWN_OFDM_REPEAT_COUNT * OFDM_BODY_LENGTH
+    total_drift_in_data_symbols = drift_per_sample * len(ofdm_blocks) * OFDM_SYMBOL_LENGTH
+    drifts = np.linspace(frame_offset_drift, frame_offset_drift + total_drift_in_data_symbols, len(ofdm_blocks))
     for drift, block in zip(drifts, ofdm_blocks):
         block_without_cyclic_prefix = block[OFDM_CYCLIC_PREFIX_LENGTH:]
         dft_of_block = np.fft.fft(block_without_cyclic_prefix, OFDM_BODY_LENGTH)
 
-        equalized_dft = dft_of_block / channel_coefficients
+        equalized_dft = dft_of_block / channel_coefficients_fft
         equalized_dft *= np.exp(2j * np.pi * drift * np.linspace(0, 1, OFDM_BODY_LENGTH))
 
         for index, (noisy_symbol, var) in enumerate(zip(equalized_dft, normalized_variance_start)):
