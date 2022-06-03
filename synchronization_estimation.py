@@ -98,9 +98,6 @@ def crop_frame_into_parts(frame: np.ndarray):
 
     samples_of_data_ofdm = endfix_known_symbol_start - prefix_known_symbol_end
 
-    # print(
-        # f"[INFO] Expected: {samples_of_data_ofdm / OFDM_SYMBOL_LENGTH} data OFDM symbols"
-    # )
     number_of_ofdm_data_blocks = round(samples_of_data_ofdm / OFDM_SYMBOL_LENGTH)
     start_of_ofdm_data_block = prefix_known_symbol_end
     end_of_ofdm_data_block = start_of_ofdm_data_block + OFDM_SYMBOL_LENGTH * number_of_ofdm_data_blocks
@@ -117,22 +114,16 @@ def crop_frame_into_parts(frame: np.ndarray):
     final_chirps_start_index_nodrift = endfix_known_symbol_end_nodrift
     final_chirps_end_index_nodrift = final_chirps_start_index_nodrift + 2 * CHIRP.size
 
-    chirp_drift_per_sample = estimate_synchronization_drift(
-            frame[initial_chirps_start_index:initial_chirps_end_index],
-            frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
-        ) / (final_chirps_start_index - initial_chirps_start_index)
+    no_drift_frame = np.zeros(final_chirps_end_index_nodrift - final_chirps_start_index_nodrift)
+    no_drift_frame[: min(final_chirps_end_index_nodrift, frame.size) - final_chirps_start_index_nodrift] += frame[final_chirps_start_index_nodrift:final_chirps_end_index_nodrift]
 
-    ofdm_drift_per_sample = estimate_synchronization_drift(
+    drift_per_sample = estimate_synchronization_drift(
             frame[prefix_known_symbol_start:prefix_known_symbol_end],
             frame[endfix_known_symbol_start_nodrift:endfix_known_symbol_end_nodrift]
         ) / (endfix_known_symbol_start - prefix_known_symbol_start)
 
-    # TODO: how should we bias?
-    drift_per_sample = 0.4 * chirp_drift_per_sample + 0.6 * ofdm_drift_per_sample
 
     # Note: one test showed averaging between frames didn't help
-
-    # print(f"[INFO] Recorded drift of {drift_per_sample} per sample")
 
     true_drift_to_endfix = (
             (prefix_known_symbol_end - prefix_known_symbol_start)
