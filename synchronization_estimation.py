@@ -146,7 +146,7 @@ def crop_frame_into_parts(frame: np.ndarray):
     )
 
 
-def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.ndarray, drift: float, drift_per_sample: float):
+def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.ndarray, drift: float, drift_per_sample: float, plot = False):
     sum_of_gains = np.zeros(OFDM_BODY_LENGTH, dtype=np.complex128)
 
     recorded_known_ofdm_blocks = recorded_known_ofdm_blocks[OFDM_CYCLIC_PREFIX_LENGTH:]
@@ -154,7 +154,7 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
 
     for block_idx, block in enumerate(known_blocks):
         block_drift = drift + drift_per_sample * OFDM_BODY_LENGTH * block_idx
-        sum_of_gains += estimate_frequency_gains_from_block(block, block_drift)
+        sum_of_gains += estimate_frequency_gains_from_block(block, block_drift, plot)
 
     channel_fft = sum_of_gains / KNOWN_OFDM_REPEAT_COUNT
 
@@ -164,7 +164,7 @@ def estimate_channel_coefficients_and_variance(recorded_known_ofdm_blocks: np.nd
     return channel_fft, normalized_variance.real
 
 
-def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float):
+def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float, plot = False):
     fft_of_recorded_block = np.fft.fft(recorded_block, OFDM_BODY_LENGTH)
     r = np.concatenate([
                 np.arange(0,  OFDM_BODY_LENGTH//2, 1)/OFDM_BODY_LENGTH,
@@ -180,14 +180,9 @@ def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float
 
     assert np.max(np.abs(drift_corrected[1:OFDM_BODY_LENGTH//2] - np.conjugate(drift_corrected[OFDM_BODY_LENGTH//2+1:][::-1]))) < 1e-10
 
-    # worth keeping this plotting:
-    # plt.subplot(221)
-    # plt.plot(recorded_block)
-    # plt.subplot(222)
-    # plt.plot(np.fft.ifft(fft_of_recorded_block / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH))
-    # plt.subplot(224)
-    # ip = np.fft.ifft(drift_corrected / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH)
-    # plt.plot(ip)
-    # plt.subplot(223)
-    # plt.plot(np.fft.ifft(drift_corrected, OFDM_BODY_LENGTH))
+    if plot:
+        ip = np.fft.ifft(drift_corrected / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH).real
+        plt.figure(69)
+        plt.plot(range(64, 128), ip[64:128], linewidth = 0.2)
+
     return drift_corrected / KNOWN_OFDM_BLOCK_FFT

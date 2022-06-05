@@ -31,19 +31,29 @@ def receive_signal(signal):
     signal_frames = crop_signal_into_overlapping_frames(signal)
 
     llr_for_each_bit = []
-    for frame in signal_frames:
+    for (frame_idx, frame) in enumerate(signal_frames):
         drift_gap, drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
 
         # the endfix start index is already somewhat by `crop_frame_into_parts`
         uncorrected_drift_to_endfix = (len(prefix) + len(data)) * drift_per_sample
         drift_to_endfix = uncorrected_drift_to_endfix - drift_gap
 
-        channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, 0, drift_per_sample)
-        channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample)
+        channel_coefficients_start, normalized_variance_start = estimate_channel_coefficients_and_variance(prefix, 0, drift_per_sample, plot=(frame_idx == 0))
+        channel_coefficients_end, normalized_variance_end = estimate_channel_coefficients_and_variance(endfix, drift_to_endfix, drift_per_sample, plot=(frame_idx == 0))
 
         # TODO: choose
-        channel_coefficients = np.fft.fft((np.fft.ifft(channel_coefficients_start) + np.fft.ifft(channel_coefficients_end)) / 2)
-        # channel_coefficients = (channel_coefficients_start + channel_coefficients_end) / 2
+        channel_coefficients = (channel_coefficients_start + channel_coefficients_end) / 2
+
+        if frame_idx == 0:
+            plt.figure(69)
+            plt.plot(range(64, 128), np.fft.ifft(channel_coefficients, OFDM_BODY_LENGTH).real[64:128], label="Averaged impulse response")
+            plt.xlabel("Sample")
+            plt.ylabel("Magnitude")
+            plt.xticks(range(64, 128+1, 16))
+            plt.title("Drift-corrected impulse responses of known OFDM blocks")
+            plt.legend()
+            plt.savefig("impulse_response.pgf")
+            plt.savefig("impulse_response.pdf")
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients, data, normalized_variance_start, drift_per_sample))
 
