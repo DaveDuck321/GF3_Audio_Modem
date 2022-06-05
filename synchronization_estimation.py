@@ -183,6 +183,6 @@ def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float
     if plot:
         ip = np.fft.ifft(drift_corrected / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH).real
         plt.figure(69)
-        plt.plot(range(64, 128), ip[64:128], linewidth = 0.2)
+        plt.plot(range(64, 128), ip[64:128], linewidth = 0.3)
 
     return drift_corrected / KNOWN_OFDM_BLOCK_FFT

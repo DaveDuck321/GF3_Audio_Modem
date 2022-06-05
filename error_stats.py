@@ -51,8 +51,8 @@ def plot_cumulative_error(bytes1: bytes, bytes2: bytes):
     # plt.axvline(x = final_index, ls='--')
     plt.vlines(range(0, 8*len(bytes1), 1534*128//2), 0, cumulative_errors[-1], color='C2')
     plt.legend()
-    plt.savefig('cumulative_bit_error.pgf')
-    plt.savefig('cumulative_bit_error.pdf')
+    plt.savefig('plots/cumulative_bit_error.pgf')
+    plt.savefig('plots/cumulative_bit_error.pdf')
 
 def bit_error(bytes1, bytes2, include_length_error=True):
     if include_length_error:
