@@ -52,8 +52,8 @@ def receive_signal(signal):
             plt.xticks(range(64, 128+1, 16))
             plt.title("Drift-corrected impulse responses of known OFDM blocks")
             plt.legend()
-            plt.savefig("impulse_response.pgf")
-            plt.savefig("impulse_response.pdf")
+            plt.savefig("plots/impulse_response.pgf")
+            plt.savefig("plots/impulse_response.pdf")
 
         llr_for_each_bit.extend(demodulate_signal(channel_coefficients, data, normalized_variance_start, drift_per_sample))
 

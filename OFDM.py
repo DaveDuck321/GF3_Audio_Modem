@@ -255,7 +255,8 @@ def modulate_bytes(data: bytes):
             plt.title("Typical frequency domain block")
             plt.xlabel("Frequency bin")
             plt.ylabel("Magnitude")
-            plt.savefig("freq_domain.pdf")
+            plt.savefig("plots/freq_domain.pdf")
+            plt.savefig("plots/freq_domain.pgf")
 
         ofdm_symbols.append(normalized_block)
 
@@ -270,8 +271,8 @@ def modulate_bytes(data: bytes):
         plt.xlabel("OFDM symbol index")
         plt.ylabel("PAPR")
         plt.legend()
-        plt.savefig("papr_reduction.pdf")
-        plt.savefig("papr_reduction.pgf")
+        plt.savefig("plots/papr_reduction.pdf")
+        plt.savefig("plots/papr_reduction.pgf")
 
     return ofdm_symbols
 
