@@ -1,6 +1,14 @@
 #  vim: set ts=4 sw=4 tw=0 et :
 from OFDM import demodulate_signal
-from config import OFDM_BODY_LENGTH, OFDM_SYMBOL_LENGTH, SAMPLE_RATE, MAX_RECORDING_DURATION, RECORDING_OUTPUT_DIR
+from config import (
+    PLOTTING_ENABLED,
+    OFDM_BODY_LENGTH,
+    OFDM_SYMBOL_LENGTH,
+    PLOTTING_ENABLED,
+    SAMPLE_RATE,
+    MAX_RECORDING_DURATION,
+    RECORDING_OUTPUT_DIR
+)
 from common import (
     save_data_to_file,
     set_audio_device_or_warn,
@@ -24,7 +32,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 import sys
 
-import matplotlib.pyplot as plt
+if PLOTTING_ENABLED:
+    import matplotlib.pyplot as plt
 
 
 def receive_signal(signal):
@@ -32,7 +41,7 @@ def receive_signal(signal):
 
     llr_for_each_bit = []
     for (frame_idx, frame) in enumerate(signal_frames):
-        drift_gap, drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame)
+        drift_gap, drift_per_sample, chirp_start, prefix, data, endfix, chirp_end = crop_frame_into_parts(frame, plot=(frame_idx == 0))
 
         # the endfix start index is already somewhat by `crop_frame_into_parts`
         uncorrected_drift_to_endfix = (len(prefix) + len(data)) * drift_per_sample
@@ -44,7 +53,7 @@ def receive_signal(signal):
         # TODO: choose
         channel_coefficients = (channel_coefficients_start + channel_coefficients_end) / 2
 
-        if frame_idx == 0:
+        if PLOTTING_ENABLED and frame_idx == 0:
             plt.figure(69)
             plt.plot(range(64, 128), np.fft.ifft(channel_coefficients, OFDM_BODY_LENGTH).real[64:128], label="Averaged impulse response")
             plt.xlabel("Sample")

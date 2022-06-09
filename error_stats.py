@@ -1,15 +1,7 @@
 from sys import argv
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 
-matplotlib.use("pgf")
-matplotlib.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False,
-})
+import matplotlib.pyplot as plt
 
 def human_readable_compare_files(filename1, filename2):
     bytes1 = open(filename1, 'rb').read()
@@ -42,6 +34,7 @@ def plot_cumulative_error(bytes1: bytes, bytes2: bytes):
 
 
 
+    plt.figure()
     plt.title("Cumulative bit errors")
     plt.xlabel("Total bits processed")
     plt.ylabel("Total bit errors")

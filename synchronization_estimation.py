@@ -1,5 +1,6 @@
 #  vim: set ts=4 sw=4 tw=0 et :
 from config import (
+    PLOTTING_ENABLED,
     CHIRP_DURATION,
     CHIRP,
     KNOWN_OFDM_BLOCK_FFT,
@@ -13,7 +14,8 @@ from config import (
 import numpy as np
 import scipy.signal as signal
 
-import matplotlib.pyplot as plt
+if PLOTTING_ENABLED:
+    import matplotlib.pyplot as plt
 
 def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
     chirp_convolution = signal.convolve(transmitted_signal, CHIRP[::-1])
@@ -62,7 +64,7 @@ def crop_signal_into_overlapping_frames(transmitted_signal: np.ndarray):
 
     return frames
 
-def estimate_synchronization_drift(first_signal: np.ndarray, second_signal: np.ndarray):
+def estimate_synchronization_drift(first_signal: np.ndarray, second_signal: np.ndarray, plot=False):
     assert first_signal.size == second_signal.size
     signal_cross_correlation = signal.correlate(first_signal, second_signal, mode='same')
     maximum_cross_correlation_index = np.argmax(signal_cross_correlation)
@@ -70,12 +72,27 @@ def estimate_synchronization_drift(first_signal: np.ndarray, second_signal: np.n
     t = np.linspace(maximum_cross_correlation_index-2, maximum_cross_correlation_index+2, 5)  # Take 5 point around the correlation peak
     quadratic_fit_of_peak = np.polyfit(t, signal_cross_correlation[maximum_cross_correlation_index-2:maximum_cross_correlation_index+3], 2)
 
-    sampling_drift = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0]) - first_signal.size / 2
+    peak = -quadratic_fit_of_peak[1] / (2 * quadratic_fit_of_peak[0])
+    sampling_drift = peak - first_signal.size / 2
+
+    if PLOTTING_ENABLED and plot:
+        t2 = np.linspace(peak-2, peak+2, 100)
+        plt.figure()
+        plt.plot(np.arange(len(signal_cross_correlation)) - first_signal.size/2, signal_cross_correlation)
+        plt.plot(t2 - first_signal.size / 2, np.poly1d(quadratic_fit_of_peak)(t2))
+        plt.xlabel("Drift")
+        plt.ylabel("Cross-correlation magnitude")
+        _, _, ymin, ymax= plt.axis()
+        plt.axis([-25, 25, ymin, ymax])
+        plt.vlines([sampling_drift], ymin, np.poly1d(quadratic_fit_of_peak)(peak), color='C2')
+        print(sampling_drift)
+        plt.savefig("plots/cross_correlation.pgf")
+        plt.savefig("plots/cross_correlation.pdf")
 
     # print('total drift: ',-sampling_drift)
     return -sampling_drift # by convention
 
-def crop_frame_into_parts(frame: np.ndarray):
+def crop_frame_into_parts(frame: np.ndarray, plot=False):
     initial_chirps_start_index = 0
     initial_chirps_end_index = 2 * CHIRP.size
 
@@ -114,7 +131,7 @@ def crop_frame_into_parts(frame: np.ndarray):
     drift_per_sample = estimate_synchronization_drift(
             frame[prefix_known_symbol_start:prefix_known_symbol_end],
             frame[endfix_known_symbol_start_nodrift:endfix_known_symbol_end_nodrift]
-        ) / (endfix_known_symbol_start - prefix_known_symbol_start)
+        , plot=plot) / (endfix_known_symbol_start - prefix_known_symbol_start)
 
 
     # Note: one test showed averaging between frames didn't help
@@ -134,6 +151,22 @@ def crop_frame_into_parts(frame: np.ndarray):
     drift_gap = true_endfix_start - endfix_known_symbol_start_nodrift
 
     # we're losing some samples but the cyclic prefix makes it ok
+
+    if PLOTTING_ENABLED and plot:
+        plt.figure()
+        plot_range = (2850, 2875)
+        plt.plot(range(*plot_range), frame[
+                prefix_known_symbol_start + OFDM_CYCLIC_PREFIX_LENGTH
+              : prefix_known_symbol_start + OFDM_CYCLIC_PREFIX_LENGTH + 4*OFDM_BODY_LENGTH
+              ][plot_range[0]: plot_range[1]])
+        plt.plot(range(*plot_range), frame[
+                endfix_known_symbol_start_nodrift + OFDM_CYCLIC_PREFIX_LENGTH
+              : endfix_known_symbol_start_nodrift + OFDM_CYCLIC_PREFIX_LENGTH + 4*OFDM_BODY_LENGTH
+              ][plot_range[0]: plot_range[1]])
+        plt.xticks(range(plot_range[0], plot_range[1]+1,5))
+        plt.xlabel('Time domain sample')
+        plt.ylabel('Magnitude')
+        plt.savefig('plots/uncorrected_ofdm_blocks.pgf')
 
     return (
         drift_gap,
@@ -180,7 +213,7 @@ def estimate_frequency_gains_from_block(recorded_block: np.ndarray, drift: float
 
     assert np.max(np.abs(drift_corrected[1:OFDM_BODY_LENGTH//2] - np.conjugate(drift_corrected[OFDM_BODY_LENGTH//2+1:][::-1]))) < 1e-10
 
-    if plot:
+    if PLOTTING_ENABLED and plot:
         ip = np.fft.ifft(drift_corrected / KNOWN_OFDM_BLOCK_FFT, OFDM_BODY_LENGTH).real
         plt.figure(69)
         plt.plot(range(64, 128), ip[64:128], linewidth = 0.3)
