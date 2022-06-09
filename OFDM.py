@@ -1,5 +1,6 @@
 # vim: set ts=4 sw=4 tw=0 et :
 from config import (
+    PLOTTING_ENABLED,
     CHIRP,
     CONSTELLATION_BITS,
     CONSTELLATION_SYMBOLS,
@@ -12,6 +13,7 @@ from config import (
     PEAK_SUPPRESSION_ENABLED,
     PEAK_SUPPRESSION_IMPULSE_APPROXIMATOR,
     PEAK_SUPPRESSION_SEQUENCE,
+    PEAK_SUPPRESSION_THRESH,
     SONG_ENABLED,
     SONG_LEN,
     SONG_NOTES,
@@ -62,7 +64,7 @@ def pad_symbols(symbols, alignment):
     return symbols
 
 
-def suppress_peaks(data: np.ndarray):
+def suppress_peaks(data: np.ndarray, plot=False):
     if not PEAK_SUPPRESSION_ENABLED:
         return data
 
@@ -71,7 +73,7 @@ def suppress_peaks(data: np.ndarray):
     # this is overwritten on each pass
     improved_time_domain_block = np.copy(data)
 
-    for thresh_std_devs, SAMPLE_VIEW_RANGE, IMPULSE_SHIFT_RANGE in PEAK_SUPPRESSION_SEQUENCE:
+    for pass_idx, (thresh_std_devs, SAMPLE_VIEW_RANGE, IMPULSE_SHIFT_RANGE) in enumerate(PEAK_SUPPRESSION_SEQUENCE):
 
         peak_thresh = thresh_std_devs * np.sqrt(improved_time_domain_block.var())
 
@@ -160,6 +162,33 @@ def suppress_peaks(data: np.ndarray):
             maybe_improved_block = improved_time_domain_block + shifted_impulses.T @ coeffs
             local_improvement = -cut_time_domain_target + cut_shifted_impulses.T @ coeffs
 
+            least_squares_improvement = 100 - 100 * np.max(np.abs(-cut_time_domain_target + cut_shifted_impulses.T @ initial_coeffs)) \
+                / np.max(np.abs(improved_time_domain_block))
+            opt_improvement = 100 - 100 * np.max(np.abs(-cut_time_domain_target + cut_shifted_impulses.T @ coeffs)) \
+                / np.max(np.abs(improved_time_domain_block))
+
+
+            if PLOTTING_ENABLED and plot and pass_idx == 0:
+                import matplotlib.pyplot as plt
+                plt.figure()
+                plt.plot(-cut_time_domain_target, label="Original")
+                plt.plot(-cut_time_domain_target + cut_shifted_impulses.T @ initial_coeffs, label=f"Least squares, {least_squares_improvement:.2f}% reduction")
+                plt.plot(-cut_time_domain_target + cut_shifted_impulses.T @ coeffs, label=f"Maximum difference optimisation, {opt_improvement:.2f}% reduction")
+                plt.legend()
+                plt.xlabel("Time domain sample in window")
+                plt.ylabel("Amplitude")
+                plt.savefig('plots/optimisation.pdf')
+                plt.savefig('plots/optimisation.pgf')
+
+                plt.figure()
+                for idx, (imp, c) in enumerate(zip(cut_shifted_impulses, coeffs)):
+                    if idx % 4 == 3:
+                        plt.plot(imp * c)
+                plt.xlabel("Time domain sample in window")
+                plt.ylabel("Amplitude")
+                plt.savefig('plots/pseudo-impulse.pdf')
+                plt.savefig('plots/pseudo-impulse.pgf')
+
             if np.max(np.abs(maybe_improved_block)) <= np.max(np.abs(improved_time_domain_block)) \
                     and np.max(np.abs(local_improvement)) < np.max(np.abs(cut_time_domain_target)):
                 # only update the block if we've actually made an improvement
@@ -189,6 +218,7 @@ def modulate_bytes(data: bytes):
     suppressed_papr = []
 
     ofdm_symbols = []
+    plotted = False
     for block_idx, block in enumerate(data_blocks):
         # Information is only mapped to frequency bins 1 to 511.
         # Frequency bins 513 to 1023 contain the reverse ordered conjugate
@@ -214,6 +244,7 @@ def modulate_bytes(data: bytes):
             fun_block = np.random.choice(list(CONSTELLATION_SYMBOLS.values()), OFDM_DATA_INDEX_RANGE["min"] - 1)
 
 
+        np.random.seed(0)
         block_with_all_freqs = np.concatenate([
             fun_block,
             block,
@@ -226,18 +257,40 @@ def modulate_bytes(data: bytes):
         assert full_block_with_all_freqs.size == OFDM_BODY_LENGTH
 
         time_domain_block_with_peaks = np.fft.ifft(full_block_with_all_freqs, OFDM_BODY_LENGTH)
-        improved_time_domain_block = suppress_peaks(time_domain_block_with_peaks)
+        improved_time_domain_block = suppress_peaks(time_domain_block_with_peaks, plot=(block_idx == 15))
 
         if PEAK_SUPPRESSION_STATS_ENABLED:
             original_peak = np.max(np.abs(time_domain_block_with_peaks))
             improved_peak = np.max(np.abs(improved_time_domain_block))
-            original_papr.append(original_peak/np.sqrt(time_domain_block_with_peaks.var()))
-            suppressed_papr.append(improved_peak/np.sqrt(improved_time_domain_block.var()))
+            original_papr.append(original_peak**2/time_domain_block_with_peaks.var())
+            suppressed_papr.append(improved_peak**2/improved_time_domain_block.var())
             suppression_prc = 100 - 100 * improved_peak/original_peak
             avg_suppression += suppression_prc
             print(f"[{block_idx+1}/{len(data_blocks)}] "
                   f"Peak suppression: {suppression_prc:.2f}%, "
                   f"PAPR: {original_papr[-1]:.2f} -> {suppressed_papr[-1]:.2f}")
+
+            if PLOTTING_ENABLED and not plotted and np.max(np.abs(fun_block)) < 1e-10:
+                import matplotlib.pyplot as plt
+                plotted = True
+                plt.figure()
+                plt.plot(time_domain_block_with_peaks, label="Unsuppressed")
+                plt.plot(improved_time_domain_block, label="Suppressed")
+                plt.xlabel("Time domain sample")
+                plt.ylabel("Magnitude")
+                plt.legend()
+                plt.savefig("plots/suppression_time.pdf")
+                plt.savefig("plots/suppression_time.pgf")
+
+                plt.figure()
+
+                plt.plot(np.fft.fft(improved_time_domain_block, OFDM_BODY_LENGTH), label="Suppressed", color='C1')
+                plt.plot(np.fft.fft(time_domain_block_with_peaks, OFDM_BODY_LENGTH), label="Unsuppressed", color='C0')
+                plt.xlabel("Frequency bin")
+                plt.ylabel("Magnitude")
+                plt.legend()
+                plt.savefig("plots/suppression_freq.pdf")
+                plt.savefig("plots/suppression_freq.pgf")
 
         block_with_cyclic_prefix = np.concatenate(
             [improved_time_domain_block[-OFDM_CYCLIC_PREFIX_LENGTH:], improved_time_domain_block]
@@ -248,31 +301,25 @@ def modulate_bytes(data: bytes):
         # Ensure imaginary component is zero
         assert not block_with_cyclic_prefix.imag.any()
 
-        if block_idx == 1:
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.plot(np.abs(np.fft.fft(normalized_block, OFDM_BODY_LENGTH)), linewidth=0.5)
-            plt.title("Typical frequency domain block")
-            plt.xlabel("Frequency bin")
-            plt.ylabel("Magnitude")
-            plt.savefig("plots/freq_domain.pdf")
-            plt.savefig("plots/freq_domain.pgf")
 
         ofdm_symbols.append(normalized_block)
 
     if PEAK_SUPPRESSION_STATS_ENABLED:
         avg_suppression /= len(data_blocks)
         print(f"Average peak suppression: {avg_suppression:.2f}%", flush=True)
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.plot(original_papr, label="Unsuppressed")
-        plt.plot(suppressed_papr, label="Suppressed")
-        plt.title(r"Peak-to-Average Power Ratio, defined as $|max(X)|/\sqrt{Var(X)}$")
-        plt.xlabel("OFDM symbol index")
-        plt.ylabel("PAPR")
-        plt.legend()
-        plt.savefig("plots/papr_reduction.pdf")
-        plt.savefig("plots/papr_reduction.pgf")
+        if PLOTTING_ENABLED:
+            import matplotlib.pyplot as plt
+            plt.figure()
+            plt.plot(original_papr, label="Unsuppressed")
+            plt.plot(suppressed_papr, label="Suppressed")
+            plt.title(r"Peak-to-Average Power Ratio, defined as $max(X^2)/Var(X)$")
+            plt.axhline(PEAK_SUPPRESSION_THRESH**2, color='C2', linestyle='--')
+            plt.text(10, PEAK_SUPPRESSION_THRESH**2+0.5, "Peak detection threshold", color='C2')
+            plt.xlabel("OFDM symbol index")
+            plt.ylabel("PAPR")
+            plt.legend()
+            plt.savefig("plots/papr_reduction.pdf")
+            plt.savefig("plots/papr_reduction.pgf")
 
     return ofdm_symbols
 

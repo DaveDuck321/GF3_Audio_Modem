@@ -5,10 +5,30 @@ from scipy import signal
 
 from pathlib import Path
 
+PLOTTING_ENABLED = False
+PLOT_THEME = 'dracula'
+
+if PLOTTING_ENABLED:
+	from os import mkdir
+	try:
+		mkdir('plots')
+	except FileExistsError:
+		pass
+	import matplotlib
+	import matplotlib.pyplot as plt
+
+	matplotlib.use("pgf")
+	matplotlib.rcParams.update({
+		"pgf.texsystem": "pdflatex",
+		'font.family': 'serif',
+		'text.usetex': True,
+		'pgf.rcfonts': False,
+	})
+	plt.style.use(PLOT_THEME)
+
 
 def get_index_of_frequency(f):
     return int(round(f * OFDM_BODY_LENGTH / SAMPLE_RATE))
-
 
 AUDIO_SCALE_FACTOR = 0.3
 SAMPLE_RATE = 48_000
