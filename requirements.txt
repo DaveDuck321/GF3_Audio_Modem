@@ -1,0 +1,5 @@
+dvg-ringbuffer
+matplotlib
+numpy
+scipy
+sounddevice
